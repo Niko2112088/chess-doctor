@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#0d1015" />
+<title>Chess Doctor — Mobile PoC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#f5f7fb;background:#0d1015;--card:#151a22;--line:#29313e;--muted:#9aa6b7;--green:#96ea79;--orange:#ffb266}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent} body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#243047 0,#0d1015 38%);padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#0d1015e8;backdrop-filter:blur(14px);border-bottom:1px solid #202733} .brand{display:flex;align-items:center;gap:9px;font-weight:800}.brand .knight{font-size:25px}.poc{font-size:10px;border:1px solid #475267;border-radius:999px;padding:3px 6px;color:#aeb8c8}
+main{width:min(720px,100%);margin:auto;padding:22px 16px 44px}.hero h1{font-size:38px;line-height:1.02;letter-spacing:-1.7px;margin:8px 0 10px}.hero p{color:#a8b2c0;line-height:1.5;margin:0 0 16px;font-size:16px}.hint{font-size:12px;color:#718097;margin:10px 2px 0}
+textarea{width:100%;min-height:164px;border:1px solid #303846;border-radius:16px;background:#121720;color:#e6ebf3;padding:15px;font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.45;outline:none;resize:vertical}textarea:focus{border-color:#546277}
+.row{display:flex;gap:10px;align-items:center;margin-top:12px}.primary{border:0;border-radius:13px;padding:13px 17px;background:var(--green);color:#10220c;font-weight:800;font-size:15px}.primary:disabled{opacity:.5}.ghost{border:1px solid #384253;border-radius:13px;padding:12px 14px;background:#171d26;color:#e8edf5;font-weight:700}.status{margin-top:11px;color:#94a0b1;font-size:13px;min-height:20px}.progress{height:4px;background:#1d2430;border-radius:99px;overflow:hidden;margin-top:8px;display:none}.progress>i{display:block;height:100%;width:0;background:var(--green);transition:width .18s ease}
+.results{display:none;margin-top:28px}.results.show{display:block}.sectionTitle{font-size:13px;color:#8f9bad;text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin:0 0 10px}.issueTabs{display:flex;gap:8px;overflow:auto;padding:1px 1px 10px;scrollbar-width:none}.issueTabs::-webkit-scrollbar{display:none}.issueTab{min-width:180px;border:1px solid #2d3542;border-radius:14px;padding:11px;text-align:left;background:#141922;color:#edf1f7}.issueTab.active{border-color:#66758b;background:#1c2330}.issueTab strong,.issueTab small{display:block}.issueTab small{color:#8e9aab;margin-top:4px}.boardWrap{background:#11161e;border:1px solid var(--line);border-radius:18px;padding:10px}.board{display:grid;grid-template-columns:repeat(8,1fr);width:100%;aspect-ratio:1;overflow:hidden;border-radius:12px}.sq{border:0;padding:0;display:grid;place-items:center;font-size:clamp(31px,10vw,58px);line-height:1}.sq.light{background:#d9dbd1}.sq.dark{background:#667568}.sq.sel{box-shadow:inset 0 0 0 5px #96ea79}.sq.target{box-shadow:inset 0 0 0 4px #ffe47a}.coord{font-size:9px;position:absolute}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:12px}.eyebrow{color:var(--orange);font-size:11px;letter-spacing:.12em;font-weight:900;text-transform:uppercase}.card h2{margin:6px 0 7px;font-size:23px}.card p{margin:0;color:#b1bbc9;line-height:1.52}.compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}.compare div{background:#0f141b;border-radius:12px;padding:11px}.compare small{color:#7f8a9c;display:block;margin-bottom:4px}.compare b{font-size:17px}.retryMsg{margin-top:12px;color:#c5ceda;line-height:1.45;min-height:22px}.source{font-size:11px;color:#687487;margin-top:10px}.localBadge{display:inline-block;border:1px solid #3a4658;border-radius:999px;padding:3px 7px;margin-left:6px;font-size:10px;color:#9ba8ba}.empty{padding:18px;border:1px dashed #3a4555;border-radius:16px;color:#9aa6b7}.footer{margin-top:30px;color:#667386;font-size:11px;line-height:1.5}
+@media(min-width:700px){main{padding-top:36px}.hero h1{font-size:52px}.boardWrap{padding:14px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="knight">♞</span><span>Chess Doctor</span><span class="poc">MOBILE PoC</span></div></header>
+<main>
+  <section class="hero">
+    <h1>Где я всё испортил?</h1>
+    <p>Вставь PGN. Прототип найдёт несколько переломных моментов и попробует объяснить их без шахматного жаргона.</p>
+    <textarea id="pgn">[Event "PoC Sample"]
+[Site "Local"]
+[Date "2026.09.17"]
+[Round "-"]
+[White "Beginner"]
+[Black "Friend"]
+[Result "0-1"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5? Qg5 5. Bxf7+ Ke7 6. O-O Qxe5 7. Bxg8 Rxg8 8. c3 Ne6 9. d4 Qxe4 0-1</textarea>
+    <div class="row"><button class="primary" id="analyze">Разобрать партию</button><button class="ghost" id="sample">Вернуть пример</button></div>
+    <div class="status" id="status">Можно сразу нажать «Разобрать партию».</div>
+    <div class="progress" id="progress"><i></i></div>
+    <div class="hint">Мобильный PoC анализирует максимум 24 полухода. Облачная оценка используется только когда позиция есть в кэше Lichess; иначе включается локальная упрощённая оценка.</div>
+  </section>
+
+  <section class="results" id="results">
+    <div class="sectionTitle">Главные моменты</div>
+    <div class="issueTabs" id="tabs"></div>
+    <div class="boardWrap"><div class="board" id="board"></div></div>
+    <div class="card" id="card"></div>
+  </section>
+  <div class="footer">Это UX-прототип, а не финальный шахматный анализатор. Цель — проверить, помогает ли формат «ошибка → простое объяснение → переиграть» понять свою партию.</div>
+</main>
+<script>
+const SAMPLE=document.getElementById('pgn').value;
+const $=s=>document.querySelector(s);
+const PIECES={wp:'♙',wn:'♘',wb:'♗',wr:'♖',wq:'♕',wk:'♔',bp:'♟',bn:'♞',bb:'♝',br:'♜',bq:'♛',bk:'♚'};
+const VALUE={p:100,n:320,b:330,r:500,q:900,k:0};
+let state={issues:[],selected:0,retry:null,evals:[],positions:[],moves:[]};
+$('#sample').onclick=()=>{$('#pgn').value=SAMPLE;};
+$('#analyze').onclick=analyzeGame;
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function setStatus(t,pct){$('#status').textContent=t; if(pct==null){$('#progress').style.display='none';return;} $('#progress').style.display='block'; $('#progress i').style.width=Math.max(0,Math.min(100,pct))+'%';}
+function whiteMaterial(game){let score=0; for(const file of 'abcdefgh')for(let rank=1;rank<=8;rank++){const p=game.get(file+rank);if(p)score+=(p.color==='w'?1:-1)*VALUE[p.type];}return score;}
+function localEval(fen){const g=new Chess(fen); let cp=whiteMaterial(g); const whiteMoves=(()=>{try{const t=new Chess(fen);if(t.turn()==='w')return t.moves().length; t.header(); return 0}catch{return 0}})();
+  // Tiny positional nudge only to break ties; never pretend this is Stockfish.
+  try{ if(g.in_check()) cp += g.turn()==='w' ? -35 : 35; }catch(e){}
+  return {cp,source:'local',bestmove:null};
+}
+async function cloudEval(fen){
+  const side=fen.split(' ')[1];
+  try{
+    const u='https://lichess.org/api/cloud-eval?multiPv=1&variant=standard&fen='+encodeURIComponent(fen);
+    const r=await fetch(u,{headers:{'Accept':'application/json'}});
+    if(!r.ok)return null;
+    const j=await r.json(); const pv=j.pvs&&j.pvs[0]; if(!pv)return null;
+    let cp=typeof pv.cp==='number'?pv.cp:(typeof pv.mate==='number'?Math.sign(pv.mate)*100000:0);
+    if(side==='b')cp*=-1;
+    return {cp,source:'cloud',bestmove:(pv.moves||'').split(' ')[0]||null,depth:j.depth||null};
+  }catch(e){return null;}
+}
+async function evalFen(fen){const c=await cloudEval(fen);return c||localEval(fen);}
+
+async function analyzeGame(){
+  if(typeof Chess==='undefined'){setStatus('Не загрузилась шахматная библиотека. Проверь интернет и открой страницу ещё раз.');return;}
+  const btn=$('#analyze'); btn.disabled=true; $('#results').classList.remove('show');
+  let game=new Chess(); const pgn=$('#pgn').value.trim();
+  try{if(!game.load_pgn(pgn,{sloppy:true}))throw new Error('bad pgn');}catch(e){setStatus('Не удалось прочитать PGN. Попробуй другой текст партии.');btn.disabled=false;return;}
+  const history=game.history({verbose:true}); if(!history.length){setStatus('В PGN нет ходов.');btn.disabled=false;return;}
+  const maxPlies=Math.min(history.length,24), replay=new Chess(), positions=[replay.fen()], moves=[];
+  for(let i=0;i<maxPlies;i++){const mv=replay.move(history[i].san,{sloppy:true});if(!mv)break;moves.push(mv);positions.push(replay.fen());}
+  state.positions=positions; state.moves=moves; state.evals=[];
+  setStatus('Анализирую позиции…',2);
+  for(let i=0;i<positions.length;i++){
+    setStatus(`Позиция ${i+1} из ${positions.length}…`,Math.round((i/positions.length)*100));
+    state.evals.push(await evalFen(positions[i]));
+    await sleep(140);
+  }
+  const issues=[];
+  for(let i=0;i<moves.length;i++){
+    const mover=positions[i].split(' ')[1], before=state.evals[i].cp, after=state.evals[i+1].cp;
+    const loss=mover==='w'?before-after:after-before;
+    if(loss>=55)issues.push({i,loss,move:moves[i],preFen:positions[i],postFen:positions[i+1],before,after,bestmove:state.evals[i].bestmove,source:(state.evals[i].source==='cloud'&&state.evals[i+1].source==='cloud')?'cloud':'mixed'});
+  }
+  // Fallback: if the simplified evaluator finds too few moments, surface the largest swings anyway.
+  if(issues.length<3){
+    const all=[];for(let i=0;i<moves.length;i++){const mover=positions[i].split(' ')[1],before=state.evals[i].cp,after=state.evals[i+1].cp;const loss=mover==='w'?before-after:after-before;all.push({i,loss,move:moves[i],preFen:positions[i],postFen:positions[i+1],before,after,bestmove:state.evals[i].bestmove,source:(state.evals[i].source==='cloud'&&state.evals[i+1].source==='cloud')?'cloud':'mixed'});}
+    all.sort((a,b)=>b.loss-a.loss); for(const a of all){if(a.loss>15&&!issues.some(x=>x.i===a.i))issues.push(a);if(issues.length>=3)break;}
+  }
+  state.issues=issues.sort((a,b)=>b.loss-a.loss).slice(0,3);state.selected=0;state.retry=null;
+  setStatus(state.issues.length?`Готово. Нашёл ${state.issues.length} момента.`:'Крупных ошибок в этом коротком анализе не нашлось.',100);
+  setTimeout(()=>$('#progress').style.display='none',700); btn.disabled=false; $('#results').classList.add('show'); render();
+  if(state.issues.length) setTimeout(()=>$('#results').scrollIntoView({behavior:'smooth',block:'start'}),150);
+}
+
+function label(loss){if(loss>=300)return'Критическая ошибка';if(loss>=140)return'Ошибка';return'Неточность';}
+function explain(x){
+  const m=x.move;
+  if(m.flags&&m.flags.includes('c'))return{title:'Размен оказался невыгодным',text:`Ты сыграл ${m.san}. После этого баланс заметно изменился не в твою пользу. Перед взятием полезно проверить не только «что я беру», но и «чем соперник ответит».`};
+  if(m.piece==='q'&&x.loss>120)return{title:'Ферзь пошёл вперёд слишком смело',text:`Ход ${m.san} выглядит активным, но после него соперник получает более сильную возможность. Перед ходом ферзём сначала проверь шахи, взятия и прямые угрозы соперника.`};
+  if(m.piece==='k')return{title:'Король стал уязвимее',text:`После ${m.san} позиция короля стала хуже. В таких моментах сначала полезно спросить: «Есть ли у соперника шах или сильная атака прямо сейчас?»`};
+  return{title:'Ты продолжил свой план и пропустил угрозу',text:`Ход ${m.san} ухудшил позицию. Самая полезная привычка здесь — перед своим ходом на секунду остановиться и проверить, что изменил последний ход соперника.`};
+}
+function uci(s){return s&&s.length>=4?s.slice(0,2)+' → '+s.slice(2,4):'—';}
+function render(){
+  const tabs=$('#tabs');tabs.innerHTML='';
+  if(!state.issues.length){$('#board').innerHTML='';$('#card').innerHTML='<div class="empty">Попробуй другую партию или более длинный PGN.</div>';return;}
+  state.issues.forEach((x,i)=>{const b=document.createElement('button');b.className='issueTab'+(i===state.selected?' active':'');b.innerHTML=`<strong>${i+1}. ${label(x.loss)}</strong><small>${x.move.san} · потеря ≈ ${(x.loss/100).toFixed(1)} пешки</small>`;b.onclick=()=>{state.selected=i;state.retry=null;render();};tabs.appendChild(b);});
+  const x=state.issues[state.selected];renderBoard(x.preFen,false);const e=explain(x);
+  $('#card').innerHTML=`<div class="eyebrow">${label(x.loss)} <span class="localBadge">${x.source==='cloud'?'cloud eval':'cloud/local'}</span></div><h2>${e.title}</h2><p>${e.text}</p><div class="compare"><div><small>Ты сыграл</small><b>${x.move.san}</b></div><div><small>Лучший ход в кэше</small><b>${uci(x.bestmove)}</b></div></div><button class="primary" id="retry">Попробовать ещё раз</button><div class="retryMsg" id="retryMsg"></div><div class="source">Если лучший ход не показан, для этой позиции использовалась локальная упрощённая оценка.</div>`;
+  $('#retry').onclick=()=>{state.retry={game:new Chess(x.preFen),from:null};renderBoard(x.preFen,true);$('#retryMsg').textContent='Нажми на фигуру, затем на поле, куда хочешь её поставить.';};
+}
+function renderBoard(fen,interactive){
+  const g=(interactive&&state.retry)?state.retry.game:new Chess(fen), el=$('#board');el.innerHTML='';const ranks=[8,7,6,5,4,3,2,1],files='abcdefgh';
+  for(let r=0;r<8;r++)for(let f=0;f<8;f++){const sq=files[f]+ranks[r],p=g.get(sq),d=document.createElement('button');d.className='sq '+((r+f)%2?'dark':'light');d.dataset.sq=sq;d.textContent=p?PIECES[p.color+p.type]:'';if(interactive){d.onclick=()=>retryClick(sq);if(state.retry.from===sq)d.classList.add('sel');}el.appendChild(d);}
+}
+async function retryClick(sq){
+  const r=state.retry,x=state.issues[state.selected];if(!r)return;
+  if(!r.from){const p=r.game.get(sq);if(p&&p.color===r.game.turn()){r.from=sq;renderBoard(r.game.fen(),true);}return;}
+  const from=r.from;let mv=null;try{mv=r.game.move({from,to:sq,promotion:'q'});}catch(e){}
+  if(!mv){r.from=null;renderBoard(r.game.fen(),true);$('#retryMsg').textContent='Так ходить нельзя. Выбери другой ход.';return;}
+  renderBoard(r.game.fen(),false);$('#retryMsg').textContent='Проверяю новый ход…';const ev=await evalFen(r.game.fen());const mover=x.preFen.split(' ')[1],newLoss=mover==='w'?x.before-ev.cp:ev.cp-x.before;
+  let msg;if(newLoss<x.loss-70)msg='✅ Намного лучше. Этим ходом ты сохранил заметно больше шансов.';else if(newLoss<x.loss+35)msg='🟡 Примерно того же уровня. Попробуй найти более спокойный ход.';else msg='❌ Не лучше. Проверь шахи, взятия и угрозы соперника.';
+  $('#retryMsg').textContent=msg;state.retry=null;
+}
+</script>
+</body>
+</html>
