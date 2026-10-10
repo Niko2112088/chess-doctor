@@ -1,0 +1,43 @@
+name: Chess Doctor CI
+
+on:
+  push:
+    branches:
+      - main
+      - "work/**"
+      - "setup/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chess-doctor-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Static asset contract
+        run: node tests/static-files.cjs
+
+      - name: Evaluation service contract
+        run: node tests/contract-tests.cjs
+
+      - name: Real Stockfish smoke test
+        run: node tests/engine-smoke.cjs
+
+      - name: Chess Doctor regression suite
+        run: node tests/qa.cjs
