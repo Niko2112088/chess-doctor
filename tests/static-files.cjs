@@ -21,11 +21,14 @@ for (const rel of required) {
 }
 
 const html = fs.readFileSync(path.join(app, 'index.html'), 'utf8');
-const service = fs.readFileSync(path.join(app, 'evaluation-service.js'), 'utf8');
 
 assert(html.includes('evaluation-service.js'), 'index.html does not load evaluation-service.js');
 assert(html.includes('vendor/chess.js'), 'index.html does not load local chess.js');
-assert(service.includes('stockfish-19-lite-single.js'), 'evaluation service does not reference Stockfish Lite');
+assert(
+  html.includes("new EvaluationService('vendor/stockfish-19-lite-single.js')") ||
+  html.includes('new EvaluationService("vendor/stockfish-19-lite-single.js")'),
+  'index.html does not configure Stockfish Lite Worker'
+);
 assert(fs.statSync(path.join(app, 'vendor/stockfish-19-lite-single.wasm')).size > 1_000_000,
   'Stockfish WASM looks unexpectedly small');
 
