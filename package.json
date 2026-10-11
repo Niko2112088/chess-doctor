@@ -1,0 +1,6 @@
+{
+  "name": "chess-doctor-qa",
+  "private": true,
+  "scripts": {"test:learning":"node tests/library.cjs && node tests/master-analysis.cjs", "test:browser":"node tests/browser.cjs"},
+  "devDependencies": {"playwright":"1.62.1"}
+}

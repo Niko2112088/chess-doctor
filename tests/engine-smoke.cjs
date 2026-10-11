@@ -2,11 +2,11 @@ const fs = require('fs');
 const vm = require('vm');
 const path = require('path');
 const {spawn} = require('child_process');
-const app = path.resolve(__dirname, '../v050');
+const app = path.resolve(__dirname, '../'+(process.env.APP_VERSION||'v050'));
 
 class EngineWorker {
   constructor(workerPath) {
-    this.child = spawn(process.execPath, [workerPath], {stdio:['pipe','pipe','pipe']});
+    this.child = spawn(process.execPath, [path.resolve(__dirname,"stockfish-runner.cjs"),workerPath], {stdio:['pipe','pipe','pipe']});
     this.buffer='';
     this.child.stdout.on('data', chunk => {
       this.buffer+=chunk.toString();

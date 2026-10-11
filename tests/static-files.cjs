@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-const app = path.resolve(__dirname, '../v050');
+const app = path.resolve(__dirname, '../'+(process.env.APP_VERSION||'v050'));
 const required = [
   'index.html',
   'evaluation-service.js',
@@ -33,3 +33,13 @@ assert(fs.statSync(path.join(app, 'vendor/stockfish-19-lite-single.wasm')).size 
   'Stockfish WASM looks unexpectedly small');
 
 console.log('required GitHub Pages assets: pass');
+
+if (process.env.APP_VERSION === 'v060') {
+  for (const rel of ['analysis-service.js','masters.js','data/grandmaster-games.json','data/SOURCES.md']) {
+    assert(fs.statSync(path.join(app, rel)).size > 0, 'missing '+rel);
+  }
+  assert(html.includes('src="analysis-service.js"') && html.includes('src="masters.js"'));
+  const masterCode=fs.readFileSync(path.join(app,'masters.js'),'utf8');
+  assert(masterCode.includes("fetch('data/grandmaster-games.json')"));
+  assert(!/(?:src|href)="\//.test(html),'root-relative asset path breaks Pages project prefix');
+}

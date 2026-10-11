@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path');
-const app=path.resolve(__dirname,'../v050');
+const app=path.resolve(__dirname,'../'+(process.env.APP_VERSION||'v050'));
 const code=fs.readFileSync(path.join(app,'evaluation-service.js'),'utf8')+'\nthis.EvaluationService=EvaluationService';
 (async()=>{
  let created=0;

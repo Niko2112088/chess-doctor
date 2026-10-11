@@ -2,10 +2,7 @@ name: Chess Doctor CI
 
 on:
   push:
-    branches:
-      - main
-      - "work/**"
-      - "setup/**"
+    branches: [main, "work/**", "setup/**"]
   pull_request:
   workflow_dispatch:
 
@@ -17,27 +14,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  regression:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
+    strategy:
+      matrix:
+        version: [v050, v060]
+    env:
+      APP_VERSION: ${{ matrix.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - run: node tests/static-files.cjs
+      - run: node tests/contract-tests.cjs
+      - run: node tests/engine-smoke.cjs
+      - run: node tests/qa.cjs
 
-      - name: Static asset contract
-        run: node tests/static-files.cjs
+  learning:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node tests/library.cjs
+      - run: node tests/master-analysis.cjs
 
-      - name: Evaluation service contract
-        run: node tests/contract-tests.cjs
-
-      - name: Real Stockfish smoke test
-        run: node tests/engine-smoke.cjs
-
-      - name: Chess Doctor regression suite
-        run: node tests/qa.cjs
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: test-results/

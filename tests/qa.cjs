@@ -1,10 +1,10 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert'),path=require('path'),{spawn}=require('child_process');
-const app=path.resolve(__dirname,'../v050');
+const app=path.resolve(__dirname,'../'+(process.env.APP_VERSION||'v050'));
 const Chess=require(path.join(app,'vendor/chess.js')).Chess;
 
 class EngineWorker {
   constructor(workerPath){
-    this.child=spawn(process.execPath,[path.resolve(app,workerPath)]);
+    this.child=spawn(process.execPath,[path.resolve(__dirname,"stockfish-runner.cjs"),path.resolve(app,workerPath)]);
     let buffer='';
     this.child.stdout.on('data',chunk=>{
       buffer+=chunk;
@@ -39,21 +39,21 @@ const sample=html.match(/<textarea id="pgn">([\s\S]*?)<\/textarea>/)[1];
 el('#pgn').value=sample;
 el('#startMove').value='1';
 
-const script=html.match(/<script>\s*([\s\S]*?)<\/script>\s*<\/body>/)[1];
+const script=html.match(/<script>\s*([\s\S]*?)<\/script>/)[1];
 let cloudMode='miss';
 const ctx=vm.createContext({
   Chess,
   Worker:EngineWorker,
   document:{getElementById:id=>el('#'+id),querySelector:el,createElement:()=>new Element()},
-  fetch:async()=> cloudMode==='network'
+  fetch:async url=> cloudMode==='network'
     ? Promise.reject(new Error('offline'))
     : cloudMode==='hit'
-      ? {ok:true,status:200,json:async()=>({depth:20,pvs:[{cp:0,moves:'e2e4'}]})}
+      ? {ok:true,status:200,json:async()=>{const fen=new URL(url).searchParams.get('fen'),m=new Chess(fen).moves({verbose:true})[0];return {depth:20,pvs:[{cp:0,moves:m?m.from+m.to+(m.promotion||''):''}]};}}
       : {ok:false,status:404},
-  AbortController,setTimeout,clearTimeout,console
+  URL,AbortController,setTimeout,clearTimeout,console
 });
 
-vm.runInContext(fs.readFileSync(path.join(app,'evaluation-service.js'),'utf8')+'\n'+script,ctx,{filename:'app.js'});
+vm.runInContext(fs.readFileSync(path.join(app,'evaluation-service.js'),'utf8')+'\n'+(fs.existsSync(path.join(app,'analysis-service.js'))?fs.readFileSync(path.join(app,'analysis-service.js'),'utf8')+'\n':'')+script,ctx,{filename:'app.js'});
 
 function makePgn(name,fen,moves){
   const g=fen?new Chess(fen):new Chess();
@@ -151,7 +151,23 @@ const suite=[
 
   assert(foundLocal);
 
+  cloudMode='hit';
+  vm.runInContext('evaluationService.reset()',ctx);
+  el('#pgn').value=makePgn('cloud hit',null,['e4','e5','Nf3','Nc6'],'w');
+  await vm.runInContext('analyzeGame()',ctx);
+  assert(vm.runInContext('state.evals.every(x=>x.source==="cloud")',ctx));
+  assert(vm.runInContext('state.issues.length===0',ctx),'cloud forced mistakes');
+  console.log('app cloud hit: pass');
+
+  vm.runInContext("setSide('b')",ctx);
+  assert(vm.runInContext('state.evals.length===0&&state.retry===null',ctx));
+  vm.runInContext("setSide('w')",ctx);
+  vm.runInContext("startRetry({preFen:'4k3/8/8/8/8/8/4r3/4K1R1 w - - 0 1'})",ctx);
+  assert(vm.runInContext('state.retry.inCheck&&!state.retry.legalFrom.includes("g1")',ctx),'illegal check responders highlighted');
+  vm.runInContext('clearAnalysisState()',ctx);
+
   cloudMode='network';
+  vm.runInContext('evaluationService.reset()',ctx);
   el('#pgn').value=makePgn('network failure',null,['e4','e5','Nf3','Nc6','Bc4','Nd4','Nxe5','Qg5'],'w');
   await vm.runInContext('analyzeGame()',ctx);
   assert(vm.runInContext('state.evals.every(x=>x.source==="local")',ctx));
