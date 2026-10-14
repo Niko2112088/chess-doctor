@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v061';
+const version=process.env.APP_VERSION||'v062';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -28,8 +28,12 @@ const server=http.createServer((req,res)=>{
  const improve=moments.find(m=>m.label!=='Сильный ход'&&m.bestmove&&(m.bestmove.from!==m.move.from||m.bestmove.to!==m.move.to));assert(improve,'expected an improvement teaching moment');
  await page.locator(`[data-moment="${moment.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Попробуй найти сильный ход'));await page.locator('#guessMaster').click();
  assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
+ assert.equal(await page.locator('#masterBoard .canMove').count(),0,'guess mode must not reveal which piece can move');
+ assert.equal(await page.locator('#masterBoard .unavailable').count(),0,'guess mode must not fade pieces before selection');
+ assert((await page.locator('#masterBoard svg[data-piece="n"]').count())>0,'recognisable knight SVG marker missing');
  const fen=await page.evaluate(()=>masterState.guess.game.fen());
  await page.locator(`#masterBoard [data-sq="${moment.move.from}"]`).click();
+ assert((await page.locator('#masterBoard .target').count())>0,'legal targets should appear only after a piece is selected');
  // An illegal destination cannot change the teaching position.
  const illegal=await page.evaluate(()=>{const r=masterState.guess;return [...'abcdefgh'].flatMap(f=>[1,2,3,4,5,6,7,8].map(n=>f+n)).find(s=>!r.targets.includes(s)&&s!==r.from);});
  await page.locator(`#masterBoard [data-sq="${illegal}"]`).click();assert.equal(await page.evaluate(()=>masterState.guess.game.fen()),fen);

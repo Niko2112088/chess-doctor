@@ -51,3 +51,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.1 RC quality patch
 
 `v061/` is the follow-up candidate created from real iPhone Safari acceptance of v0.6.0. It fixes Master Lesson error/guess semantics, stabilizes the teaching reference depth, removes contradictory historical/recommended move feedback, and tightens strong-move selection. `v060/` remains preserved.
+
+
+## v0.6.2 RC mobile UX patch
+
+`v062/` removes pre-selection source-piece hints from Master Guess and redraws the knight for faster recognition on phones. Analysis logic is unchanged; `v061/` remains preserved.
