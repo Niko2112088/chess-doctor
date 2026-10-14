@@ -2,8 +2,9 @@ name: Chess Doctor CI
 
 on:
   push:
-    branches: [main, "work/**", "setup/**"]
+    branches: [main, "setup/**"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
