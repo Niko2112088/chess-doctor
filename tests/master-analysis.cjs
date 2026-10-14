@@ -43,7 +43,7 @@ vm.runInContext(fs.readFileSync(path.resolve(__dirname,'../'+version+'/evaluatio
  let active=true;await assert.rejects(Analysis.scan({evaluate:async()=>{active=false;return {cp:0}}},quiet.positions,quiet.moves,{master:true,active:()=>active}),/прерван/);
  // Real full famous game, not just a move snippet, validates two-pass and terminal mate handling.
  const opera=require('../'+version+'/data/grandmaster-games.json').find(g=>g.white.includes('Морфи'));const replay=Analysis.replay(opera.pgn);const result=await Analysis.scan(real,replay.positions,replay.moves,{master:true});assert(result.moments.length>0);assert.equal(result.evals.at(-1).cp,100000);assert(result.moments.every(m=>m.bestmove&&m.confirmed));
- assert(!result.moments.some(m=>m.label==='Сильный ход'&&(m.i===6||m.i===8)),'routine Opera captures promoted to teaching moments');
+ assert(!result.moments.some(m=>m.label==='Сильный ход'&&(m.i===6||m.i===7||m.i===8)),'routine Opera captures promoted to teaching moments');
  const improveMoment=result.moments.find(m=>m.label!=='Сильный ход'&&!Analysis.sameMove(m.move,m.bestmove));
  if(improveMoment){const targetResult=await Analysis.compare(real,improveMoment.preFen,improveMoment.move,improveMoment.bestmove,{targetMove:improveMoment.bestmove,referenceBestmove:improveMoment.bestmove,depth:improveMoment.depth,lessonType:'improve'});assert.equal(targetResult.kind,'exact');assert(Analysis.sameMove(targetResult.bestmove,improveMoment.bestmove));}
  console.log('Opera game',replay.moves.length,'plies',result.moments.length,'confirmed moments');

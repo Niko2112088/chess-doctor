@@ -125,7 +125,7 @@ function revealMasterTarget(l,r) {
   const game=new Chess(r.moment.preFen),mv=game.move(r.targetMove);
   if(!mv)return;
   const actor=esc(masterActor(r.moment)),kind=r.lessonType;
-  const historical=kind==='improve'?`<p>В партии ${actor} сыграли: ${humanMove(r.moment.move,'side')}</p>`:'';
+  const historical=kind==='improve'?`<p>В партии было сыграно: ${humanMove(r.moment.move,'side')}</p>`:'';
   finishMasterGuess(l,r,game.fen(),{playedFrom:mv.from,playedTo:mv.to},
     `<h2>${kind==='strong'?'Сильный ход из партии':'Более сильный вариант'}</h2><p>${humanMove(mv,'side')}</p>${historical}<button class="ghost" id="returnLesson">Вернуться к партии</button>`,
     kind==='strong'?'Ход из партии раскрыт.':'Более сильный вариант раскрыт.');
@@ -167,8 +167,8 @@ async function masterGuessClick(sq,promotion) {
     let historyLine='';
     if(r.lessonType==='improve')historyLine=sameHistorical
       ? '<p>Ты повторил ход из партии — именно его мы сейчас разбираем.</p>'
-      : `<p>В партии ${actor} сыграли: ${humanMove(r.moment.move,'side')}</p>`;
-    else if(!sameHistorical)historyLine=`<p>В партии ${actor} сыграли: ${humanMove(r.moment.move,'side')}</p>`;
+      : `<p>В партии было сыграно: ${humanMove(r.moment.move,'side')}</p>`;
+    else if(!sameHistorical)historyLine=`<p>В партии было сыграно: ${humanMove(r.moment.move,'side')}</p>`;
     const showRecommendation=r.lessonType==='improve'&&['weak','playable','repeat'].includes(feedback.kind)&&!Analysis.sameMove(feedback.actual,r.targetMove);
     const recommendation=showRecommendation?`<p>${humanSuggestion(r.targetMove)}</p>`:'';
     const html=`<h2>${feedback.text}</h2><p>${humanMove(feedback.actual,'Ты')}</p><p>${explanation}</p>${historyLine}${recommendation}

@@ -25,7 +25,7 @@ const Analysis = (() => {
     if(!x.bestmove||!sameMove(x.move,x.bestmove)||x.loss>35)return false;
     const move=x.move;
     if(move.promotion||/[+#]/.test(move.san)||/[kq]/.test(move.flags||''))return true;
-    if(move.captured&&pieceValue[move.captured]>=3&&!immediateRecapture(moves,x.i))return true;
+    if(move.captured&&pieceValue[move.captured]>pieceValue[move.piece]&&!immediateRecapture(moves,x.i))return true;
     return false;
   }
   async function scan(service,positions,moves,{side=null,master=false,active=()=>true,progress=()=>{}}={}) {
