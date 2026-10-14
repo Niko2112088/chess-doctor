@@ -1,6 +1,7 @@
 const assert=require('assert'),fs=require('fs'),crypto=require('crypto');
-const {Chess}=require('../v060/vendor/chess.js');const Analysis=require('../v060/analysis-service.js');global.Chess=Chess;
-const games=require('../v060/data/grandmaster-games.json'),ids=new Set();
+const version=process.env.APP_VERSION||'v061';
+const {Chess}=require('../'+version+'/vendor/chess.js');const Analysis=require('../'+version+'/analysis-service.js');global.Chess=Chess;
+const games=require('../'+version+'/data/grandmaster-games.json'),ids=new Set();
 assert(games.length>=24,'24 games required');
 for(const g of games){
  assert(/^[a-z0-9-]+$/.test(g.id),g.id);assert(!ids.has(g.id),'duplicate '+g.id);ids.add(g.id);

@@ -2,8 +2,9 @@ name: Chess Doctor CI
 
 on:
   push:
-    branches: [main, "work/**", "setup/**"]
+    branches: [main, "setup/**"]
   pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,7 +20,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        version: [v050, v060]
+        version: [v050, v060, v061]
     env:
       APP_VERSION: ${{ matrix.version }}
     steps:
@@ -34,6 +35,8 @@ jobs:
 
   learning:
     runs-on: ubuntu-latest
+    env:
+      APP_VERSION: v061
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -45,6 +48,8 @@ jobs:
 
   browser:
     runs-on: ubuntu-latest
+    env:
+      APP_VERSION: v061
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -60,3 +65,4 @@ jobs:
         with:
           name: browser-evidence
           path: test-results/
+          retention-days: 3
