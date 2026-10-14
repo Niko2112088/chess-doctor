@@ -46,3 +46,8 @@ node tests/browser.cjs
 CI covers both candidates, new learning tests and real Chromium at desktop and
 375px widths under a simulated GitHub Pages project path. An actual iPhone Safari
 check remains a manual RC acceptance step; no real iPhone test is claimed.
+
+
+## v0.6.1 RC quality patch
+
+`v061/` is the follow-up candidate created from real iPhone Safari acceptance of v0.6.0. It fixes Master Lesson error/guess semantics, stabilizes the teaching reference depth, removes contradictory historical/recommended move feedback, and tightens strong-move selection. `v060/` remains preserved.

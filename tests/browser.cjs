@@ -1,5 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
+const version=process.env.APP_VERSION||'v061';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -11,9 +12,9 @@ const server=http.createServer((req,res)=>{
  const browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});
  try{
  const context=await browser.newContext({viewport:{width:1280,height:900}}),page=await context.newPage(),errors=[],assets=[];
- page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/v060/'))assets.push({url:r.url(),status:r.status()});});
+ page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/'+version+'/'))assets.push({url:r.url(),status:r.status()});});
  await page.route('https://lichess.org/**',route=>route.abort());
- await page.goto(`http://127.0.0.1:${server.address().port}/chess-doctor/v060/`);
+ await page.goto(`http://127.0.0.1:${server.address().port}/chess-doctor/${version}/`);
  await page.locator('#masters').click();await page.locator('.libraryCard').first().waitFor();assert.equal(await page.locator('.libraryCard').count(),25);
  await page.locator('#playerFilter').selectOption({label:'Михаил Таль'});assert((await page.locator('.libraryCard').count())>=2);
  await page.locator('#playerFilter').selectOption('');await page.locator('#eraFilter').selectOption('modern');assert((await page.locator('.libraryCard').count())>0);await page.locator('#eraFilter').selectOption('');
@@ -22,9 +23,11 @@ const server=http.createServer((req,res)=>{
  await page.locator('#masterNext').click();assert((await page.locator('#masterCard').textContent()).includes('пешкой'));
  await page.locator('#masterPrev').click();await page.locator('#masterAnalyze').click();await page.locator('#masterStop').click();assert((await page.locator('#masterStatus').textContent()).includes('остановлен'));
  await page.locator('#masterAnalyze').click();await page.waitForFunction(()=>!masterState.busy&&masterState.moments.length>0,{},{timeout:120000});
- const moment=await page.evaluate(()=>masterState.moments.find(m=>m.label==='Сильный ход')||masterState.moments[0]);
- await page.locator(`[data-moment="${moment.i}"]`).click();await page.locator('#guessMaster').click();
- assert(!(await page.locator('#masterCard').textContent()).includes(moment.move.san));
+ const moments=await page.evaluate(()=>masterState.moments);
+ const moment=moments.find(m=>m.label==='Сильный ход');assert(moment,'expected a strong teaching moment');
+ const improve=moments.find(m=>m.label!=='Сильный ход'&&m.bestmove&&(m.bestmove.from!==m.move.from||m.bestmove.to!==m.move.to));assert(improve,'expected an improvement teaching moment');
+ await page.locator(`[data-moment="${moment.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Попробуй найти сильный ход'));await page.locator('#guessMaster').click();
+ assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
  const fen=await page.evaluate(()=>masterState.guess.game.fen());
  await page.locator(`#masterBoard [data-sq="${moment.move.from}"]`).click();
  // An illegal destination cannot change the teaching position.
@@ -32,10 +35,15 @@ const server=http.createServer((req,res)=>{
  await page.locator(`#masterBoard [data-sq="${illegal}"]`).click();assert.equal(await page.evaluate(()=>masterState.guess.game.fen()),fen);
  await page.locator(`#masterBoard [data-sq="${moment.move.from}"]`).click();await page.locator(`#masterBoard [data-sq="${moment.move.to}"]`).click();
  if(moment.move.promotion)await page.locator('#promotionChoice button').first().click();
- await page.locator('#guessAgain').waitFor({timeout:60000});assert((await page.locator('#masterCard').textContent()).includes('Ты нашёл ход гроссмейстера'));
- assert(!(await page.locator('#masterCard').textContent()).includes('Гроссмейстер сыграл:'));
+ await page.locator('#guessAgain').waitFor({timeout:60000});assert((await page.locator('#masterCard').textContent()).includes('Ты нашёл сильный ход'));
  assert(!(await page.locator('#masterCard').textContent()).includes('Можно было'));
- await page.locator('#guessAgain').click();await page.locator('#showMaster').click();assert((await page.locator('#masterStatus').textContent()).includes('раскрыт'));
+ await page.locator('#guessAgain').click();assert((await page.locator('#showMaster').textContent()).includes('Показать ход из партии'));await page.locator('#showMaster').click();assert((await page.locator('#masterStatus').textContent()).includes('раскрыт'));
+ // Error/chance lesson targets the confirmed stronger move, not the historical move.
+ await page.locator(`[data-moment="${improve.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Найди более сильный ход'));await page.locator('#guessMaster').click();
+ assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
+ await page.locator(`#masterBoard [data-sq="${improve.bestmove.from}"]`).click();await page.locator(`#masterBoard [data-sq="${improve.bestmove.to}"]`).click();
+ if(improve.bestmove.promotion)await page.locator('#promotionChoice button').first().click();
+ await page.locator('#guessAgain').waitFor({timeout:60000});const improveText=await page.locator('#masterCard').textContent();assert(improveText.includes('Ты нашёл более сильный вариант'));assert(!improveText.includes('Можно было'));
  await page.locator('#masterFlip').click();assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),'h1');
  await page.locator('#myGame').click();await page.locator('#sideB').click();await page.locator('#analyze').click();await page.waitForFunction(()=>!document.querySelector('#analyze').disabled,{},{timeout:60000});
  assert(!(await page.locator('#status').textContent()).includes('не завершён'));assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'h1');
