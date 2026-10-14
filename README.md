@@ -56,3 +56,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.2 RC mobile UX patch
 
 `v062/` removes pre-selection source-piece hints from Master Guess and redraws the knight for faster recognition on phones. Analysis logic is unchanged; `v061/` remains preserved.
+
+
+## v0.6.3 RC visual polish
+
+`v063/` refines the knight silhouette and adds total game length in full moves to Master Lesson metadata. Replay wording also stops treating plies as full moves. `v062/` remains preserved.
