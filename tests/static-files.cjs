@@ -43,3 +43,10 @@ if (process.env.APP_VERSION === 'v060') {
   assert(masterCode.includes("fetch('data/grandmaster-games.json')"));
   assert(!/(?:src|href)="\//.test(html),'root-relative asset path breaks Pages project prefix');
 }
+
+if (process.env.APP_VERSION === 'v064') {
+  const masterCode=fs.readFileSync(path.join(app,'masters.js'),'utf8');
+  assert(!masterCode.includes('Позиция тонкая'), 'beginner UI must not use vague chess jargon: "Позиция тонкая"');
+  assert(!masterCode.includes('тактическую историю'), 'beginner UI must not use meta/jargon wording about a "тактическая история"');
+  assert(masterCode.includes('Здесь нет одной простой и очевидной причины'), 'plain-language fallback explanation is missing');
+}

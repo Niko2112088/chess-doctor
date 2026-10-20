@@ -63,7 +63,7 @@ async function analyzeMaster() {
       progress:(text,pct)=>{if(masterToken===token){$('#masterStatus').textContent=text;$('#masterProgress').value=pct;}}});
     if(masterToken!==token||masterState!==lesson)return;
     lesson.moments=result.moments;lesson.evals=result.evals;lesson.busy=false;
-    lesson.status=result.moments.length?`Готово: ${Analysis.plural(result.moments.length)} для урока.`:'Крупных подтверждённых моментов не найдено. Позиционные нюансы требуют более тонкого разбора.';
+    lesson.status=result.moments.length?`Готово: ${Analysis.plural(result.moments.length)} для урока.`:'Крупных подтверждённых моментов не найдено. В этой партии нет одной достаточно большой ошибки, которую стоит выделять отдельно.';
     renderMaster();
   }catch(e){if(masterToken===token&&masterState===lesson){lesson.busy=false;lesson.status='Анализ не завершён: '+e.message+'. Можно повторить.';renderMaster();}}
 }
@@ -75,12 +75,12 @@ function masterExplanation(x) {
     const rd=removedDefenderInfo(x);
     if(rd)return `Фигура с ${rd.defenderFrom} защищала поле ${rd.victimSq}. Этот ход убрал именно эту защиту. ${x.reply?'В партии затем: '+humanMove(x.reply,'side'):''}`;
     if(pieceImmediatelyCapturable(x))return `Фигура на ${move.to} осталась без защиты, и соперник может взять её легальным ходом. Это проверено на доске.`;
-    return 'Оценка заметно изменилась после этого хода. Позиция тонкая: простую причину нельзя надёжно подтвердить, поэтому не будем придумывать тактическую историю.';
+    return 'После этого хода позиция стала заметно хуже. Здесь нет одной простой и очевидной причины, поэтому Doctor не будет придумывать объяснение. Ниже показан более сильный вариант.';
   }
   if(move.promotion)return 'Пешка превратилась в новую фигуру. Этот ход сохраняет преимущество по повторной проверке.';
   if(move.captured)return `Этот ход забирает ${PIECE_NAME_ACC[move.captured]} соперника и сохраняет оценку позиции. Взятие само по себе не доказывает выигрыш материала: учитывай возможный ответ.`;
   if(board.in_check())return 'Этот ход создаёт шах. Сопернику приходится отвечать на угрозу королю; на доске доступны только легальные ответы.';
-  return 'Один из сильнейших вариантов. Позиция тонкая: надёжной простой причины пока нет.';
+  return 'Это один из лучших ходов в этой позиции. Здесь нет одной простой причины вроде выигрыша фигуры или немедленной угрозы, поэтому Doctor не будет придумывать объяснение.';
 }
 function masterLessonKind(moment){return moment?.label==='Сильный ход'?'strong':'improve';}
 function masterTarget(moment){return masterLessonKind(moment)==='strong'?moment.move:moment.bestmove;}
