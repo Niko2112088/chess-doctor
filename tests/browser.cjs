@@ -36,7 +36,11 @@ const server=http.createServer((req,res)=>{
  const moments=await page.evaluate(()=>masterState.moments);
  const moment=moments.find(m=>m.label==='Сильный ход');assert(moment,'expected a strong teaching moment');
  const improve=moments.find(m=>m.label!=='Сильный ход'&&m.bestmove&&(m.bestmove.from!==m.move.from||m.bestmove.to!==m.move.to));assert(improve,'expected an improvement teaching moment');
- await page.locator(`[data-moment="${moment.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Попробуй найти сильный ход'));await page.locator('#guessMaster').click();
+ await page.locator(`[data-moment="${moment.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Попробуй найти сильный ход'));
+ const strongExpectedFirst=moment.move.color==='b'?'h1':'a8';assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),strongExpectedFirst,'teaching side must be at bottom before Guess starts');
+ await page.locator('#demoMomentMove').click();await page.locator('#masterBoard .moveGhost').waitFor({state:'attached'});await page.locator('#masterBoard .moveGhost').waitFor({state:'detached',timeout:2000});
+ assert(await page.locator(`#masterBoard [data-sq="${moment.move.to}"]`).evaluate(el=>el.classList.contains('playedTo')),'demo must finish on described destination');
+ await page.locator('#guessMaster').click();assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),strongExpectedFirst,'Guess must not flip the board after selection');
  assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
  assert.equal(await page.locator('#masterBoard .canMove').count(),0,'guess mode must not reveal which piece can move');
  assert.equal(await page.locator('#masterBoard .unavailable').count(),0,'guess mode must not fade pieces before selection');
@@ -57,12 +61,14 @@ const server=http.createServer((req,res)=>{
  assert(!(await page.locator('#masterCard').textContent()).includes('Можно было'));
  await page.locator('#guessAgain').click();assert((await page.locator('#showMaster').textContent()).includes('Показать ход из партии'));await page.locator('#showMaster').click();assert((await page.locator('#masterStatus').textContent()).includes('раскрыт'));
  // Error/chance lesson targets the confirmed stronger move, not the historical move.
- await page.locator(`[data-moment="${improve.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Найди более сильный ход'));await page.locator('#guessMaster').click();
+ await page.locator(`[data-moment="${improve.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Найди более сильный ход'));
+ const improveExpectedFirst=improve.move.color==='b'?'h1':'a8';assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),improveExpectedFirst,'improvement lesson side must be at bottom immediately');
+ await page.locator('#guessMaster').click();assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),improveExpectedFirst,'improvement Guess must keep orientation');
  assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
  await page.locator(`#masterBoard [data-sq="${improve.bestmove.from}"]`).click();await page.locator(`#masterBoard [data-sq="${improve.bestmove.to}"]`).click();
  if(improve.bestmove.promotion)await page.locator('#promotionChoice button').first().click();
  await page.locator('#guessAgain').waitFor({timeout:60000});const improveText=await page.locator('#masterCard').textContent();assert(improveText.includes('Ты нашёл более сильный вариант'));assert(!improveText.includes('Можно было'));
- await page.locator('#masterFlip').click();assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),'h1');
+ const beforeFlip=await page.locator('#masterBoard .sq').first().getAttribute('data-sq');await page.locator('#masterFlip').click();const afterFlip=await page.locator('#masterBoard .sq').first().getAttribute('data-sq');assert.notEqual(afterFlip,beforeFlip,'manual board flip must still work');
  await page.locator('#myGame').click();await page.locator('#sideB').click();await page.locator('#analyze').click();await page.waitForFunction(()=>!document.querySelector('#analyze').disabled,{},{timeout:60000});
  assert(!(await page.locator('#status').textContent()).includes('не завершён'));assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'h1');
  await page.locator('#modeDetective').click();await page.locator('#sideW').click();assert.equal(await page.locator('#board .sq').count(),0);

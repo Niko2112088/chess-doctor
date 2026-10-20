@@ -1,6 +1,6 @@
 /* UI adapter: uses the same EvaluationService, Analysis and board renderer as My Game. */
 let masterLibrary=[],masterLoad=null,masterToken=0,productMode='my';
-let masterState=null;
+let masterState=null,masterAnimationToken=0;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const resultWord=r=>r==='1-0'?'Победили белые':r==='0-1'?'Победили чёрные':'Ничья';
 const russianCount=(n,one,few,many)=>{const a=n%10,b=n%100;return n+' '+(a===1&&b!==11?one:a>=2&&a<=4&&(b<12||b>14)?few:many);};
@@ -46,7 +46,7 @@ function stopMaster(message='Анализ остановлен. Можно пр�
 }
 function openMaster(game) {
   stopMaster();
-  try {masterState={game,...Analysis.replay(game.pgn),cursor:0,moments:[],status:'Партию можно листать сразу. Найдём моменты для урока?',busy:false,guess:null};}
+  try {masterState={game,...Analysis.replay(game.pgn),cursor:0,moments:[],status:'Партию можно листать сразу. Найдём моменты для урока?',busy:false,guess:null,orientation:'w'};}
   catch(e){$('#masterFlow').textContent=e.message;return;}
   renderMaster();
 }
@@ -54,7 +54,7 @@ function masterStep(delta) {
   if(!masterState)return;
   // Changing position invalidates an outstanding attempt, never its feedback into another game.
   if(masterState.guess)stopMaster('Угадывание завершено.');
-  masterState.cursor=Math.max(0,Math.min(masterState.moves.length,masterState.cursor+delta));masterState.guess=null;renderMaster();
+  masterState.cursor=Math.max(0,Math.min(masterState.moves.length,masterState.cursor+delta));masterState.guess=null;const activeMoment=masterState.moments.find(m=>m.i+1===masterState.cursor);if(activeMoment)masterState.orientation=activeMoment.move.color;renderMaster();
 }
 async function analyzeMaster() {
   const lesson=masterState,token=++masterToken;evaluationService.cancel();lesson.busy=true;lesson.guess=null;renderMaster();
@@ -97,17 +97,37 @@ function renderMaster() {
   <div class="boardWrap"><div class="board" id="masterBoard"></div></div>
   <p id="masterTurn">${l.cursor===l.moves.length?`Партия закончилась: ${resultWord(g.result).toLowerCase()} · ${russianCount(fullMoveCount(l.moves),'ход','хода','ходов')}.`:`${masterProgressText(l.cursor)}. Сейчас ходят ${sideWord(l.positions[l.cursor].split(' ')[1])}.`}</p>
   <div class="detectiveNav"><button id="masterPrev" ${l.cursor===0?'disabled':''}>← Предыдущий ход</button><button id="masterNext" ${l.cursor===l.moves.length?'disabled':''}>Следующий ход →</button></div>
-  <div class="card" id="masterCard"><h2>${moment?moment.label:'Ход партии'}</h2><p>${mv?humanMove(mv,'side'):'Белые начинают. Нажми «Следующий ход».'}</p>${moment?`<p>${masterExplanation(moment)}</p><button class="primary" id="guessMaster" ${l.busy?'disabled':''}>${masterChallengeTitle(moment)}</button>`:''}
+  <div class="card" id="masterCard"><h2>${moment?moment.label:'Ход партии'}</h2><p>${mv?humanMove(mv,'side'):'Белые начинают. Нажми «Следующий ход».'}</p>${moment?`<p>${masterExplanation(moment)}</p><div class="lessonActions"><button class="ghost" id="demoMomentMove">▶ Показать этот ход</button><button class="primary" id="guessMaster" ${l.busy?'disabled':''}>${masterChallengeTitle(moment)}</button></div>`:''}
   <details class="notation"><summary>Технические детали</summary><code>${mv?esc(mv.san):'Начальная позиция'}${moment?` · глубина проверки ${moment.depth}`:''}</code><pre>${esc(g.pgn)}</pre></details></div>
   <button class="ghost" id="masterFlip">Повернуть доску</button>`;
   renderMasterBoard(l.positions[l.cursor],false,mv?{playedFrom:mv.from,playedTo:mv.to}:null);
   $('#backLibrary').onclick=()=>{stopMaster();masterState=null;renderLibrary();};$('#masterAnalyze').onclick=analyzeMaster;$('#masterStop').onclick=()=>stopMaster();
   $('#masterPrev').onclick=()=>masterStep(-1);$('#masterNext').onclick=()=>masterStep(1);
   $('#masterFlip').onclick=()=>{l.orientation=l.orientation==='b'?'w':'b';if(l.guess)renderGuessBoard();else renderMasterBoard(l.positions[l.cursor],false,null);};
-  document.querySelectorAll('[data-moment]').forEach(button=>button.onclick=()=>{if(l.guess)stopMaster();l.cursor=Number(button.dataset.moment)+1;l.guess=null;renderMaster();});
-  if(moment)$('#guessMaster').onclick=()=>startMasterGuess(moment);
+  document.querySelectorAll('[data-moment]').forEach(button=>button.onclick=()=>{if(l.guess)stopMaster();const picked=l.moments.find(m=>m.i===Number(button.dataset.moment));if(picked)l.orientation=picked.move.color;l.cursor=Number(button.dataset.moment)+1;l.guess=null;renderMaster();});
+  if(moment){$('#guessMaster').onclick=()=>startMasterGuess(moment);$('#demoMomentMove').onclick=()=>demoMasterMove(moment.preFen,moment.move);}
+}
+function demoMasterMove(preFen,move) {
+  try{
+    const game=new Chess(preFen),mv=game.move({from:move.from,to:move.to,...(move.promotion?{promotion:move.promotion}:{})});
+    if(!mv)return;
+    animateMasterMove(preFen,mv,game.fen(),{playedFrom:mv.from,playedTo:mv.to});
+  }catch(_){}
+}
+function animateMasterMove(preFen,move,finalFen,marks) {
+  renderMasterBoard(preFen,false,null);
+  const token=masterAnimationToken,board=$('#masterBoard'),from=board?.querySelector(`[data-sq="${move.from}"]`),to=board?.querySelector(`[data-sq="${move.to}"]`),piece=from?.querySelector('.piece');
+  if(!board||!from||!to||!piece){renderMasterBoard(finalFen,false,marks);return;}
+  const boardRect=board.getBoundingClientRect(),pieceRect=piece.getBoundingClientRect(),toRect=to.getBoundingClientRect();
+  const ghost=piece.cloneNode(true);ghost.classList.add('moveGhost');
+  Object.assign(ghost.style,{left:(pieceRect.left-boardRect.left)+'px',top:(pieceRect.top-boardRect.top)+'px',width:pieceRect.width+'px',height:pieceRect.height+'px'});
+  board.appendChild(ghost);piece.style.opacity='0';
+  const dx=(toRect.left+toRect.width/2)-(pieceRect.left+pieceRect.width/2),dy=(toRect.top+toRect.height/2)-(pieceRect.top+pieceRect.height/2);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(token===masterAnimationToken)ghost.style.transform=`translate(${dx}px,${dy}px)`; }));
+  setTimeout(()=>{if(token===masterAnimationToken)renderMasterBoard(finalFen,false,marks);},520);
 }
 function renderMasterBoard(fen,interactive,marks) {
+  masterAnimationToken++;
   // Share SVGs, coordinates, orientation and legal target rendering with Doctor.
   const original=state.retry,color=state.userColor;
   state.retry=interactive?masterState.guess:null;state.userColor=masterState.orientation||'w';
@@ -129,15 +149,17 @@ function revealMasterTarget(l,r) {
   if(!mv)return;
   const actor=esc(masterActor(r.moment)),kind=r.lessonType;
   const historical=kind==='improve'?`<p>В партии было сыграно: ${humanMove(r.moment.move,'side')}</p>`:'';
-  finishMasterGuess(l,r,game.fen(),{playedFrom:mv.from,playedTo:mv.to},
+  const marks={playedFrom:mv.from,playedTo:mv.to};
+  finishMasterGuess(l,r,game.fen(),marks,
     `<h2>${kind==='strong'?'Сильный ход из партии':'Более сильный вариант'}</h2><p>${humanMove(mv,'side')}</p>${historical}<button class="ghost" id="returnLesson">Вернуться к партии</button>`,
     kind==='strong'?'Ход из партии раскрыт.':'Более сильный вариант раскрыт.');
+  animateMasterMove(r.moment.preFen,mv,game.fen(),marks);
 }
 function startMasterGuess(moment) {
   const l=masterState,game=new Chess(moment.preFen),legal=game.moves({verbose:true}),targetMove=masterTarget(moment);
   if(!targetMove)return;
   const lessonType=masterLessonKind(moment);
-  l.guess={moment,targetMove,lessonType,game,from:null,targets:[],legalFrom:[...new Set(legal.map(m=>m.from))],inCheck:game.in_check(),pending:false,showLegalSources:false};l.orientation=game.turn();
+  l.guess={moment,targetMove,lessonType,game,from:null,targets:[],legalFrom:[...new Set(legal.map(m=>m.from))],inCheck:game.in_check(),pending:false,showLegalSources:false};if(!l.orientation)l.orientation=game.turn();
   $('#masterPrev').disabled=$('#masterNext').disabled=true;
   $('#masterTurn').textContent=`До ключевого решения. Сейчас ходят ${sideWord(game.turn())}.`;
   $('#masterCard').innerHTML=`<h2>${masterChallengeTitle(moment)}</h2><p id="masterGuessStatus" role="status">Выбери любую свою фигуру. Подсказки появятся только после выбора: мы не будем заранее показывать, какой фигурой искать ход.</p><div id="promotionChoice"></div><button class="ghost" id="showMaster">${masterRevealLabel(moment)}</button>`;
@@ -185,9 +207,14 @@ async function masterGuessClick(sq,promotion) {
     else if(!sameHistorical)historyLine=`<p>В партии было сыграно: ${humanMove(r.moment.move,'side')}</p>`;
     const showRecommendation=r.lessonType==='improve'&&['weak','playable','repeat'].includes(feedback.kind)&&!Analysis.sameMove(feedback.actual,r.targetMove);
     const recommendation=showRecommendation?`<p>${humanSuggestion(r.targetMove)}</p>`:'';
-    const html=`<h2>${feedback.text}</h2><p>${humanMove(feedback.actual,'Ты')}</p><p>${explanation}</p>${historyLine}${recommendation}
+    const demoHistory=!sameHistorical?`<button class="ghost" id="demoHistoryMove">▶ Показать ход из партии</button>`:'';
+    const demoBetter=showRecommendation?`<button class="ghost" id="demoBetterMove">▶ Показать более сильный ход</button>`:'';
+    const demos=(demoHistory||demoBetter)?`<div class="lessonActions">${demoHistory}${demoBetter}</div>`:'';
+    const html=`<h2>${feedback.text}</h2><p>${humanMove(feedback.actual,'Ты')}</p><p>${explanation}</p>${historyLine}${recommendation}${demos}
     <button class="primary" id="guessAgain">Попробовать снова</button><button class="ghost" id="returnLesson">Вернуться к партии</button>`;
     finishMasterGuess(l,r,feedback.fen,{playedFrom:feedback.actual.from,playedTo:feedback.actual.to},html,'Попытка проверена.');
     $('#guessAgain').onclick=()=>startMasterGuess(r.moment);
+    const demoHistoryBtn=$('#demoHistoryMove');if(demoHistoryBtn)demoHistoryBtn.onclick=()=>demoMasterMove(r.moment.preFen,r.moment.move);
+    const demoBetterBtn=$('#demoBetterMove');if(demoBetterBtn)demoBetterBtn.onclick=()=>demoMasterMove(r.moment.preFen,r.targetMove);
   }catch(e){if(masterState===l&&masterToken===token&&l.guess===r){r.pending=false;$('#masterGuessStatus').textContent='Не удалось сравнить: '+e.message+'. Попробуй ещё раз.';r.from=null;r.targets=[];renderGuessBoard();}}
 }
