@@ -41,6 +41,10 @@ const server=http.createServer((req,res)=>{
  assert.equal(await page.locator('#masterBoard .canMove').count(),0,'guess mode must not reveal which piece can move');
  assert.equal(await page.locator('#masterBoard .unavailable').count(),0,'guess mode must not fade pieces before selection');
  assert((await page.locator('#masterBoard svg[data-piece="n"]').count())>0,'recognisable knight SVG marker missing');
+ assert((await page.locator('#masterBoard svg[data-piece="b"]').count())>0,'bishop SVG marker missing');
+ assert((await page.locator('#masterBoard svg[data-piece="p"]').count())>0,'pawn SVG marker missing');
+ const pieceSizes=await page.evaluate(()=>({p:getComputedStyle(document.querySelector('#masterBoard svg[data-piece="p"]')).width,b:getComputedStyle(document.querySelector('#masterBoard svg[data-piece="b"]')).width}));
+ assert.notEqual(pieceSizes.p,pieceSizes.b,'pawn and bishop should have distinct mobile proportions');
  const fen=await page.evaluate(()=>masterState.guess.game.fen());
  await page.locator(`#masterBoard [data-sq="${moment.move.from}"]`).click();
  assert((await page.locator('#masterBoard .target').count())>0,'legal targets should appear only after a piece is selected');
