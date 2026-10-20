@@ -61,3 +61,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.3 RC visual polish
 
 `v063/` refines the knight silhouette and adds total game length in full moves to Master Lesson metadata. Replay wording also stops treating plies as full moves. `v062/` remains preserved.
+
+
+## v0.6.4 Beta external-test build
+
+`v064/` is the first build intentionally wrapped for testers who did not participate in development. It keeps v0.6.3 chess logic, adds concise onboarding/PGN help, uses public Beta branding, and provides a backend-free feedback dialog that copies a three-question report. `v063/` remains preserved.

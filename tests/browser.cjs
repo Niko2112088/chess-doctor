@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v063';
+const version=process.env.APP_VERSION||'v064';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -15,6 +15,15 @@ const server=http.createServer((req,res)=>{
  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.url().includes('/'+version+'/'))assets.push({url:r.url(),status:r.status()});});
  await page.route('https://lichess.org/**',route=>route.abort());
  await page.goto(`http://127.0.0.1:${server.address().port}/chess-doctor/${version}/`);
+ assert((await page.locator('header').textContent()).includes('Beta'),'public beta badge missing');
+ assert((await page.locator('.betaIntro').textContent()).includes('Вставь PGN партии'),'first-run instructions missing');
+ await page.locator('#feedbackOpen').click();assert(await page.locator('#feedbackDialog').evaluate(el=>el.open),'feedback dialog did not open');
+ await page.locator('#feedbackUnclear').fill('Не понял один шаг');
+ await page.locator('#feedbackWrong').fill('Хочу проверить объяснение');
+ await page.locator('#feedbackReturn').selectOption({label:'Да'});
+ const feedback=await page.evaluate(()=>feedbackText());
+ assert(feedback.includes('Не понял один шаг')&&feedback.includes('Хочу проверить объяснение')&&feedback.includes('Да'),'feedback summary incomplete');
+ await page.locator('.feedbackClose').click();assert(!(await page.locator('#feedbackDialog').evaluate(el=>el.open)),'feedback dialog did not close');
  await page.locator('#masters').click();await page.locator('.libraryCard').first().waitFor();assert.equal(await page.locator('.libraryCard').count(),25);
  await page.locator('#playerFilter').selectOption({label:'Михаил Таль'});assert((await page.locator('.libraryCard').count())>=2);
  await page.locator('#playerFilter').selectOption('');await page.locator('#eraFilter').selectOption('modern');assert((await page.locator('.libraryCard').count())>0);await page.locator('#eraFilter').selectOption('');
