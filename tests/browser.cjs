@@ -74,6 +74,10 @@ const server=http.createServer((req,res)=>{
  await page.locator('#modeDetective').click();await page.locator('#sideW').click();assert.equal(await page.locator('#board .sq').count(),0);
  await page.locator('#pgn').fill('bad PGN');await page.locator('#analyze').click();assert((await page.locator('#status').textContent()).includes('Не удалось прочитать'));
  await page.locator('#sample').click();await page.locator('#analyze').click();await page.waitForFunction(()=>!document.querySelector('#analyze').disabled,{},{timeout:60000});
+ await page.evaluate(()=>{
+   const pre=new Chess(),m=pre.move({from:'f2',to:'f3'}),postFen=pre.fen(),bestGame=new Chess(),best=bestGame.move({from:'e2',to:'e4'});
+   state.userColor='w';state.positions=[new Chess().fen(),postFen];state.moves=[m];state.issues=[{i:0,preFen:new Chess().fen(),postFen,move:m,reply:null,bestmove:best,loss:180,source:'local',depth:12}];state.selected=0;state.view='before';state.mode='doctor';document.querySelector('#results').classList.add('show');render();
+ });
  assert(await page.locator('#visualExplain').isVisible(),'Doctor visual explanation button missing');
  const doctorFirst=await page.locator('#board .sq').first().getAttribute('data-sq');assert.equal(doctorFirst,'a8','own-game board orientation must stay with White at bottom');
  await page.locator('#visualExplain').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
