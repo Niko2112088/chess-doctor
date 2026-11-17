@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v065';
+const version=process.env.APP_VERSION||'v066';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -80,12 +80,23 @@ const server=http.createServer((req,res)=>{
  });
  assert(await page.locator('#visualExplain').isVisible(),'Doctor visual explanation button missing');
  const doctorFirst=await page.locator('#board .sq').first().getAttribute('data-sq');assert.equal(doctorFirst,'a8','own-game board orientation must stay with White at bottom');
- await page.locator('#visualExplain').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
- await page.waitForFunction(()=>document.querySelector('#visualExplain')?.textContent.includes('Показать ещё раз'),{},{timeout:10000});
- assert((await page.locator('#visualExplainStatus').textContent()).includes('Готово'),'visual story did not finish cleanly');
- assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'a8','visual story must not flip own-game board');
+ await page.locator('#visualExplain').click();
+ assert(await page.locator('#visualGuide').isVisible(),'guided visual controls must appear by the board');
+ assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 1 из 3'),'guided lesson should start at step 1');
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('До твоего хода'),'first step must explain the starting position');
+ await page.waitForTimeout(700);
+ const guideTop=await page.locator('#visualGuide').evaluate(el=>el.getBoundingClientRect().top);
+ assert(guideTop<180,'starting a visual lesson should scroll the guide back near the board');
+ await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
+ assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'next must advance one visual step');
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('Твой ход'),'second step must identify the user move');
+ await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('Более сильный вариант'),'last step must show the stronger move');
+ assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'a8','guided visual lesson must not flip own-game board');
+ await page.locator('#visualPrev').click();assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'back must move one step without replaying everything');
+ await page.locator('#visualGuideClose').click();assert(await page.locator('#visualGuide').isHidden(),'guided visual controls must close cleanly');
  await page.locator('#visualBetter').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
- await page.waitForFunction(()=>!document.querySelector('#visualBetter')?.disabled,{},{timeout:5000});
+ await page.waitForFunction(()=>!document.querySelector('#visualBetter')?.disabled,{},{timeout:6000});
  await page.locator('#pgn').fill('1. d4 d5 2. c4 e6');assert.equal(await page.locator('#board .sq').count(),0);
  await page.locator('#masters').click();await page.locator('.libraryCard').first().waitFor();
  await page.setViewportSize({width:375,height:812});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile library overflow');
