@@ -44,7 +44,7 @@ if (process.env.APP_VERSION === 'v060') {
   assert(!/(?:src|href)="\//.test(html),'root-relative asset path breaks Pages project prefix');
 }
 
-if (process.env.APP_VERSION === 'v064') {
+if (['v064','v065'].includes(process.env.APP_VERSION)) {
   const masterCode=fs.readFileSync(path.join(app,'masters.js'),'utf8');
   assert(!masterCode.includes('Позиция тонкая'), 'beginner UI must not use vague chess jargon: "Позиция тонкая"');
   assert(!masterCode.includes('тактическую историю'), 'beginner UI must not use meta/jargon wording about a "тактическая история"');

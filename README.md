@@ -66,3 +66,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.4 Beta external-test build
 
 `v064/` is the first build intentionally wrapped for testers who did not participate in development. It keeps v0.6.3 chess logic, adds concise onboarding/PGN help, uses public Beta branding, and provides a backend-free feedback dialog that copies a three-question report. `v063/` remains preserved.
+
+
+## v0.6.5 Beta visual-first explanations
+
+`v065/` adds evidence-bound visual stories to Doctor: animate the user move, animate a confirmed direct reply when appropriate, then show the stronger alternative. The player’s side stays at the bottom. This adds a board-first learning path without changing chess-analysis logic. `v064/` remains preserved.
