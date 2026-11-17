@@ -76,3 +76,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.6 Beta guided visual lessons
 
 `v066/` turns Doctor visual explanations into a mobile-friendly guided lesson: automatic scroll back to the board, controls next to the board, manual Back/Next steps by default, optional autoplay, and slower piece motion. Chess-analysis logic is unchanged. `v065/` remains preserved.
+
+
+## v0.6.7 Beta move-role labels
+
+`v067/` makes every guided visual scene self-identifying: “ТВОЙ ХОД”, “ХОД СОПЕРНИКА”, “СИЛЬНЫЙ ХОД”, plus supporting before/after labels. The labels are visually distinct and do not change chess logic.

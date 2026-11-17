@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v066';
+const version=process.env.APP_VERSION||'v067';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -83,15 +83,15 @@ const server=http.createServer((req,res)=>{
  await page.locator('#visualExplain').click();
  assert(await page.locator('#visualGuide').isVisible(),'guided visual controls must appear by the board');
  assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 1 из 3'),'guided lesson should start at step 1');
- assert((await page.locator('#visualGuideTitle').textContent()).includes('До твоего хода'),'first step must explain the starting position');
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('До твоего хода'),'first step must explain the starting position');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'ПОЗИЦИЯ ДО ХОДА');
  await page.waitForTimeout(700);
  const guideTop=await page.locator('#visualGuide').evaluate(el=>el.getBoundingClientRect().top);
  assert(guideTop<180,'starting a visual lesson should scroll the guide back near the board');
  await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
  assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'next must advance one visual step');
- assert((await page.locator('#visualGuideTitle').textContent()).includes('Твой ход'),'second step must identify the user move');
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('Твой ход'),'second step must identify the user move');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'ТВОЙ ХОД');assert(await page.locator('#visualGuideRole').evaluate(el=>el.classList.contains('yours')));
  await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
- assert((await page.locator('#visualGuideTitle').textContent()).includes('Более сильный вариант'),'last step must show the stronger move');
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('Более сильный вариант'),'last step must show the stronger move');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'СИЛЬНЫЙ ХОД');assert(await page.locator('#visualGuideRole').evaluate(el=>el.classList.contains('strong')));
  assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'a8','guided visual lesson must not flip own-game board');
  await page.locator('#visualPrev').click();assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'back must move one step without replaying everything');
  await page.locator('#visualGuideClose').click();assert(await page.locator('#visualGuide').isHidden(),'guided visual controls must close cleanly');
