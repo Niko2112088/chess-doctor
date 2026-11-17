@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v064';
+const version=process.env.APP_VERSION||'v065';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -74,6 +74,14 @@ const server=http.createServer((req,res)=>{
  await page.locator('#modeDetective').click();await page.locator('#sideW').click();assert.equal(await page.locator('#board .sq').count(),0);
  await page.locator('#pgn').fill('bad PGN');await page.locator('#analyze').click();assert((await page.locator('#status').textContent()).includes('Не удалось прочитать'));
  await page.locator('#sample').click();await page.locator('#analyze').click();await page.waitForFunction(()=>!document.querySelector('#analyze').disabled,{},{timeout:60000});
+ assert(await page.locator('#visualExplain').isVisible(),'Doctor visual explanation button missing');
+ const doctorFirst=await page.locator('#board .sq').first().getAttribute('data-sq');assert.equal(doctorFirst,'a8','own-game board orientation must stay with White at bottom');
+ await page.locator('#visualExplain').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
+ await page.waitForFunction(()=>document.querySelector('#visualExplain')?.textContent.includes('Показать ещё раз'),{},{timeout:10000});
+ assert((await page.locator('#visualExplainStatus').textContent()).includes('Готово'),'visual story did not finish cleanly');
+ assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'a8','visual story must not flip own-game board');
+ await page.locator('#visualBetter').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
+ await page.waitForFunction(()=>!document.querySelector('#visualBetter')?.disabled,{},{timeout:5000});
  await page.locator('#pgn').fill('1. d4 d5 2. c4 e6');assert.equal(await page.locator('#board .sq').count(),0);
  await page.locator('#masters').click();await page.locator('.libraryCard').first().waitFor();
  await page.setViewportSize({width:375,height:812});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile library overflow');
