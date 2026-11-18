@@ -44,7 +44,7 @@ if (process.env.APP_VERSION === 'v060') {
   assert(!/(?:src|href)="\//.test(html),'root-relative asset path breaks Pages project prefix');
 }
 
-if (['v064','v065','v066','v067','v068','v069','v070'].includes(process.env.APP_VERSION)) {
+if (['v064','v065','v066','v067','v068','v069','v070','v071'].includes(process.env.APP_VERSION)) {
   const masterCode=fs.readFileSync(path.join(app,'masters.js'),'utf8');
   assert(!masterCode.includes('Позиция тонкая'), 'beginner UI must not use vague chess jargon: "Позиция тонкая"');
   assert(!masterCode.includes('тактическую историю'), 'beginner UI must not use meta/jargon wording about a "тактическая история"');
@@ -63,4 +63,14 @@ if (process.env.APP_VERSION === 'v070') {
   assert(html.includes('width="60" height="11"'), 'v070 unified piece base missing');
   assert(html.includes('L48 15'), 'v070 horse-head knight silhouette missing');
   assert(html.includes('cx="29" cy="23" r="6"'), 'v070 queen crown missing');
+}
+
+if (process.env.APP_VERSION === 'v071') {
+  const html=fs.readFileSync(path.join(app,'index.html'),'utf8');
+  assert(html.includes('Chess Doctor · Beta v0.7.1.'), 'v071 version marker missing');
+  assert(html.includes('.piece[data-piece="p"]{width:58%}'), 'v071 pawn proportion missing');
+  assert(html.includes('.piece[data-piece="r"]{width:70%}'), 'v071 rook proportion missing');
+  assert(html.includes('.piece[data-piece="b"]{width:72%}'), 'v071 bishop proportion missing');
+  assert(html.includes('.piece[data-piece="n"]{width:76%}'), 'v071 knight proportion missing');
+  assert(html.includes('align-self:end'), 'v071 base alignment missing');
 }
