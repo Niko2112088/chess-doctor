@@ -86,3 +86,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.8 Beta reference-style move animation
 
 `v068/` applies the visual grammar from the supplied chess animation reference: source/target highlighting, persistent directional arrow, slower travel, explicit capture fade, and held final state. The same animation language is used in Doctor and Master Lessons. Chess-analysis logic is unchanged.
+
+
+## v0.6.9 Beta knight silhouette
+
+`v069/` replaces the rabbit-like custom knight SVG with a more recognisable Staunton-style horse-head profile. All v068 animation and chess logic remain unchanged.
