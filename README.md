@@ -91,3 +91,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.9 Beta knight silhouette
 
 `v069/` replaces the rabbit-like custom knight SVG with a more recognisable Staunton-style horse-head profile. All v068 animation and chess logic remain unchanged.
+
+
+## v0.7.0 Beta unified piece set
+
+`v070/` replaces all custom chess-piece SVGs with one consistent reference-inspired set. The knight is now explicitly horse-like; every piece shares the same base language and outline weight. Chess and animation logic are unchanged.
