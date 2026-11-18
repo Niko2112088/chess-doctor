@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0d1015" />
+<title>Chess Doctor — Beta</title>
+<script src="vendor/chess.js"></script>
+<script src="evaluation-service.js"></script>
+<script src="analysis-service.js"></script>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;color:#f5f7fb;background:#0d1015;--card:#151a22;--line:#29313e;--muted:#9aa6b7;--green:#96ea79;--orange:#ffb266;--blue:#76b7ff;--yellow:#ffe47a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#243047 0,#0d1015 38%);padding-bottom:env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#0d1015e8;backdrop-filter:blur(14px);border-bottom:1px solid #202733}.brand{display:flex;align-items:center;gap:9px;font-weight:800}.brand .knight{font-size:25px}.poc{font-size:10px;border:1px solid #475267;border-radius:999px;padding:3px 6px;color:#aeb8c8}
+main{width:min(720px,100%);margin:auto;padding:22px 16px 44px}.hero h1{font-size:38px;line-height:1.02;letter-spacing:-1.7px;margin:8px 0 10px}.hero p{color:#a8b2c0;line-height:1.5;margin:0 0 16px;font-size:16px}.hint{font-size:12px;color:#718097;margin:10px 2px 0}
+.sideBox{background:#121720;border:1px solid #303846;border-radius:16px;padding:13px;margin-bottom:12px}.sideLabel{font-size:12px;color:#8f9bad;margin-bottom:9px;font-weight:700}.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.seg button{border:1px solid #374151;border-radius:12px;background:#171d26;color:#dfe6ef;padding:11px;font-size:14px;font-weight:800}.seg button.active{background:#263448;border-color:#6d819b;color:#fff;box-shadow:inset 0 0 0 1px #6d819b}.sideNote{font-size:11px;color:#718097;margin:9px 2px 0}
+textarea{width:100%;min-height:164px;border:1px solid #303846;border-radius:16px;background:#121720;color:#e6ebf3;padding:15px;font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;line-height:1.45;outline:none;resize:vertical}textarea:focus{border-color:#546277}
+.row{display:flex;gap:10px;align-items:center;margin-top:12px}.row button,.seg button{user-select:none;-webkit-user-select:none;touch-action:manipulation;cursor:pointer}.row button:active,.seg button:active{transform:scale(.985)}.primary{border:0;border-radius:13px;padding:13px 17px;background:var(--green);color:#10220c;font-weight:800;font-size:15px}.primary:disabled{opacity:.5}.ghost{border:1px solid #384253;border-radius:13px;padding:12px 14px;background:#171d26;color:#e8edf5;font-weight:700}.status{margin-top:11px;color:#94a0b1;font-size:13px;min-height:20px}.progress{height:4px;background:#1d2430;border-radius:99px;overflow:hidden;margin-top:8px;display:none}.progress>i{display:block;height:100%;width:0;background:var(--green);transition:width .18s ease}
+.results{display:none;margin-top:28px}.results.show{display:block}.sectionTitle{font-size:13px;color:#8f9bad;text-transform:uppercase;letter-spacing:.12em;font-weight:800;margin:0 0 10px}.issueTabs{display:flex;gap:8px;overflow:auto;padding:1px 1px 10px;scrollbar-width:none}.issueTabs::-webkit-scrollbar{display:none}.issueTab{min-width:210px;border:1px solid #2d3542;border-radius:14px;padding:11px;text-align:left;background:#141922;color:#edf1f7}.issueTab.active{border-color:#66758b;background:#1c2330}.issueTab strong,.issueTab small{display:block}.issueTab small{color:#8e9aab;margin-top:5px;line-height:1.3}
+.boardWrap{background:#11161e;border:1px solid var(--line);border-radius:18px;padding:10px}.board{position:relative;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;overflow:hidden;border-radius:12px}.sq{position:relative;border:0;padding:0;display:grid;place-items:center;line-height:1}.sq.light{background:#d9dbd1}.sq.dark{background:#667568}.sq.sel{box-shadow:inset 0 0 0 5px var(--green)}.sq.canMove:before{content:"";position:absolute;inset:4px;border:2px solid #ffe47acc;border-radius:7px;z-index:1;pointer-events:none}.sq.unavailable .piece{opacity:.34}.sq.target:after{content:"";width:22%;height:22%;border-radius:50%;background:#ffe47acc;position:absolute}.sq.playedFrom{box-shadow:inset 0 0 0 4px #78b8ff}.sq.playedTo{box-shadow:inset 0 0 0 4px #96ea79}.sq.replyFrom{box-shadow:inset 0 0 0 3px #ffb266}.sq.replyTo{box-shadow:inset 0 0 0 4px #ff7a7a}.coordFile,.coordRank{position:absolute;font-size:9px;font-weight:900;z-index:3;opacity:.78;pointer-events:none}.coordFile{right:3px;bottom:2px}.coordRank{left:3px;top:2px}.sq.light .coordFile,.sq.light .coordRank{color:#526052}.sq.dark .coordFile,.sq.dark .coordRank{color:#e6eadf}.piece{width:76%;height:76%;display:block;position:relative;z-index:2}.piece[data-piece="p"]{width:66%;height:66%}.piece[data-piece="b"]{width:82%;height:82%}.piece[data-piece="n"]{width:86%;height:86%}.piece.white{filter:drop-shadow(0 1px 0 rgba(0,0,0,.3))}.piece.black{filter:drop-shadow(0 1px 0 rgba(255,255,255,.08))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:12px}.eyebrow{color:var(--orange);font-size:11px;letter-spacing:.12em;font-weight:900;text-transform:uppercase}.card h2{margin:7px 0 12px;font-size:23px;line-height:1.18}.step{background:#10151c;border:1px solid #222a36;border-radius:14px;padding:13px;margin-top:9px}.stepLabel{font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:#8290a4;font-weight:900;margin-bottom:6px}.stepText{font-size:15px;line-height:1.5;color:#d7dee8}.stepText strong{color:white}.why{margin-top:12px;color:#b7c0cd;line-height:1.55;font-size:15px}.lesson{margin-top:12px;border-left:3px solid var(--green);padding:10px 12px;background:#10161a;border-radius:0 12px 12px 0;color:#cbd5df;line-height:1.5;font-size:14px}.better{margin-top:12px;background:#122015;border:1px solid #28472c;border-radius:14px;padding:13px}.better .stepLabel{color:#89d878}.betterText{font-size:15px;line-height:1.5;color:#e7f4e3}.choiceCompare{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.choiceBox{background:#10151c;border:1px solid #27303c;border-radius:14px;padding:12px;min-width:0}.choiceBox.good{background:#122015;border-color:#28472c}.choiceBox .choiceLabel{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#8290a4;font-weight:900;margin-bottom:7px}.choiceBox.good .choiceLabel{color:#89d878}.choiceMove{font-size:16px;font-weight:850;color:#f2f5fa;line-height:1.3}.choiceBox.good .choiceMove{color:#eaf8e7}.choiceCapture{font-size:12px;color:#98a5b7;margin-top:5px;line-height:1.35}.valueNote{margin-top:10px;padding:10px 12px;border-radius:12px;background:#151b23;border:1px solid #293342;color:#c7d0dc;font-size:13px;line-height:1.45}.valueNote strong{color:#fff}.causeChain{margin-top:12px;display:grid;gap:7px}.causeStep{display:grid;grid-template-columns:24px 1fr;gap:9px;align-items:start;background:#10151c;border:1px solid #27303c;border-radius:12px;padding:10px 11px;color:#cbd4df;font-size:13px;line-height:1.45}.causeIcon{font-weight:900;color:#90a0b6;text-align:center}.causeStep.danger{border-color:#56333a;background:#1b1417}.causeStep.danger .causeIcon{color:#ff7b83}.noAlt{margin-top:12px;padding:10px 12px;border-radius:12px;background:#141a22;border:1px solid #2c3542;color:#9fabbb;font-size:13px;line-height:1.45}@media(max-width:420px){.choiceCompare{grid-template-columns:1fr}}.retryMsg{margin-top:12px;color:#c5ceda;line-height:1.45;min-height:22px}.attemptResult{margin-top:12px;padding:12px 13px;border-radius:13px;border:1px solid #303946;line-height:1.5;font-size:14px}.attemptResult strong{display:block;color:#f4f7fb;font-size:16px;margin-bottom:4px}.attemptResult.excellent,.attemptResult.good{background:#112017;border-color:#2b5632}.attemptResult.improved{background:#211e12;border-color:#5f552b}.attemptResult.repeat{background:#1d1820;border-color:#5d4565}.attemptResult.bad{background:#211416;border-color:#64353b}.attemptResult.neutral{background:#141a22;border-color:#334052}.attemptOriginal{margin-top:14px;border-top:1px solid #29313d;padding-top:11px;color:#8190a5;font-size:12px}.attemptOriginal summary{cursor:pointer;color:#94a2b5}.attemptOriginalBody{margin-top:9px;line-height:1.5;color:#aab5c4}.source{font-size:11px;color:#687487;margin-top:12px}.localBadge{display:inline-block;border:1px solid #3a4658;border-radius:999px;padding:3px 7px;margin-left:6px;font-size:10px;color:#9ba8ba}.empty{padding:18px;border:1px dashed #3a4555;border-radius:16px;color:#9aa6b7}.footer{margin-top:30px;color:#667386;font-size:11px;line-height:1.5}.legend{display:flex;gap:12px;flex-wrap:wrap;margin:9px 2px 0;color:#78869a;font-size:10px}.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}.notation{margin-top:10px;border-top:1px solid #262e3a;padding-top:9px;color:#758297;font-size:11px}.notation summary{cursor:pointer;color:#8492a6}.notation code{display:block;margin-top:7px;color:#b2becd;white-space:normal;line-height:1.5}.footerNote{margin-top:10px;color:#6f7d90;font-size:11px}
+
+.modeSwitch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}.modeBtn{border:1px solid #374151;border-radius:13px;background:#171d26;color:#cbd4df;padding:11px 12px;font-size:14px;font-weight:850;cursor:pointer}.modeBtn.active{background:#263448;border-color:#6d819b;color:#fff;box-shadow:inset 0 0 0 1px #6d819b}.modeBtn.detective.active{background:#302716;border-color:#8d7130;color:#ffe7a0;box-shadow:inset 0 0 0 1px #8d7130}.detectiveNav{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center;margin-top:12px}.detectiveNav button{border:1px solid #384253;border-radius:12px;padding:11px;background:#171d26;color:#e8edf5;font-weight:800}.detectiveNav button:disabled{opacity:.35}.detectiveGuess{margin-top:12px;width:100%}.detectiveGuess.solved{background:#17331b;color:#aef19c;border:1px solid #2e6137}.detectiveGuess:disabled{opacity:.65}.detectiveFeedback{margin-top:12px;padding:12px 13px;border-radius:13px;border:1px solid #303946;line-height:1.5;font-size:14px}.detectiveFeedback.correct{background:#112017;border-color:#2b5632}.detectiveFeedback.close{background:#211e12;border-color:#5f552b}.detectiveFeedback.wrong{background:#211416;border-color:#64353b}.detectiveFeedback strong{display:block;color:#f4f7fb;font-size:16px;margin-bottom:4px}.detectiveHint{margin-top:10px;color:#8f9daf;font-size:12px;line-height:1.45}.detectiveMove{font-size:17px;font-weight:850;color:#f2f5fa;line-height:1.4}.detectiveOpponent{color:#aeb8c6}.revealDoctor{margin-top:10px;width:100%}.detectiveActions{display:grid;gap:8px;margin-top:10px}.detectiveActions .primary,.detectiveActions .ghost{width:100%}.detectiveNoIssue{padding:16px;border:1px dashed #4d5b6d;border-radius:14px;color:#aab5c4;line-height:1.5;background:#111720}
+@media(min-width:700px){main{padding-top:36px}.hero h1{font-size:52px}.boardWrap{padding:14px}}
+.analysisOptions{display:flex;align-items:center;gap:12px;margin:12px 1px 0;color:#aeb9c9;font-size:13px}.analysisOptions input{width:74px;border:1px solid #475267;border-radius:9px;background:#151a22;color:#fff;padding:9px;font-size:16px}.boardNav{display:flex;gap:8px;margin:10px 0 0}.boardNav button{flex:1;border:1px solid #3c4757;border-radius:10px;background:#1b2633;color:#e5edf8;padding:10px;font-weight:700}.boardNav button.active{border-color:#96ea79;color:#96ea79}.boardNav button:disabled{opacity:.4}.evalNote{color:#aeb9c9;font-size:12px;line-height:1.5;margin:10px 1px 0}.sq:focus-visible,.boardNav button:focus-visible,.primary:focus-visible,.ghost:focus-visible{outline:3px solid #ffe47a;outline-offset:2px}@media(max-width:420px){.row{flex-wrap:wrap}.row button{flex:1}}
+[hidden]{display:none!important}
+
+.libraryFilters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0}.libraryFilters label{font-size:13px;color:var(--muted)}select{width:100%;min-height:44px;margin-top:5px;background:var(--card);color:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;font-size:16px}.libraryCards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.libraryCard{display:flex;flex-direction:column;gap:10px;text-align:left;background:var(--card);color:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;min-width:0}.libraryCard strong{font-size:18px;line-height:1.45}.libraryCard span{line-height:1.4}.tags{color:var(--green);font-size:13px}.muted,.masterIntro{color:var(--muted);line-height:1.5}.lessonTitle{font-size:25px;line-height:1.3}.masterMoments{display:flex;gap:8px;overflow:auto;margin:12px 0}.masterMoments button{flex-shrink:0}button{touch-action:manipulation}button:not(.sq){min-height:44px;cursor:pointer}progress{width:100%;accent-color:var(--green)}.notation pre{white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto}#masterStatus,#masterTurn{font-size:14px;line-height:1.5;color:var(--muted)}@media(max-width:480px){.libraryCards{grid-template-columns:1fr}.libraryFilters{grid-template-columns:1fr}.modeSwitch{grid-template-columns:1fr}.hero h1{font-size:32px}}:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+
+.betaIntro{margin:0 0 16px;padding:16px 17px;border:1px solid #334052;border-radius:18px;background:linear-gradient(180deg,#18202b,#121820);display:grid;gap:9px}
+.betaIntro strong{font-size:18px;color:#fff}.betaIntro span,.betaIntro p{color:#c5cfdb;line-height:1.5}.betaIntro ol{margin:2px 0 0;padding-left:22px;color:#e5eaf1;line-height:1.7}.betaIntro details{border-top:1px solid #2b3543;padding-top:9px}.betaIntro summary{cursor:pointer;color:#9fc5ff;font-weight:750}.betaIntro small{color:#8c99aa;line-height:1.45}
+.sampleNotice{margin:0 0 14px;padding:10px 12px;border-radius:12px;background:#171e28;border:1px solid #303b4b;color:#aeb9c8;font-size:13px;line-height:1.45}
+.feedbackHeader{border:1px solid #3a4658;border-radius:999px;background:#171d26;color:#e8edf5;padding:8px 12px;font-weight:800;min-height:38px;cursor:pointer}
+#feedbackDialog{width:min(620px,calc(100% - 28px));max-height:calc(100vh - 28px);padding:0;border:1px solid #374252;border-radius:20px;background:#151a22;color:#f5f7fb;box-shadow:0 24px 80px #0009}
+#feedbackDialog::backdrop{background:#05070bbb;backdrop-filter:blur(4px)}
+.feedbackCard{padding:18px;display:grid;gap:12px}.feedbackTop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.feedbackTop h2{margin:5px 0 0;font-size:22px}
+.feedbackClose{border:1px solid #394455;border-radius:999px;background:#1b222d;color:#fff;width:40px;height:40px;font-size:25px;line-height:1;cursor:pointer}
+.feedbackLabel{display:grid;gap:7px;color:#dfe6ef;font-size:13px;font-weight:750}.feedbackLabel textarea{min-height:88px;font-family:inherit;font-size:15px;resize:vertical}.feedbackLabel select{margin:0}
+.feedbackCopy{width:100%}.feedbackStatus{min-height:20px;color:#aee99c;font-size:13px}.feedbackPrivacy{color:#8390a2;line-height:1.45}
+@media(max-width:420px){header{padding:12px 13px}.brand{gap:7px}.brand .poc{font-size:9px}.feedbackHeader{padding:7px 10px}.betaIntro{padding:14px}.feedbackCard{padding:15px}}
+
+.lessonActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.lessonActions button{flex:1 1 190px}
+.moveGhost{position:absolute!important;z-index:20!important;pointer-events:none;transition:transform .48s cubic-bezier(.22,.8,.25,1);filter:drop-shadow(0 5px 6px rgba(0,0,0,.28))}
+@media(prefers-reduced-motion:reduce){.moveGhost{transition:none}}
+
+.visualExplain{margin:14px 0 4px;padding:13px;border:1px solid #344153;border-radius:14px;background:#111821}
+.visualExplain strong{display:block;margin-bottom:5px}.visualExplain p{margin:0;color:#c7d0dc;line-height:1.45}
+.visualExplain .visualActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.visualExplain .visualActions button{flex:1 1 190px}
+.visualFocus{box-shadow:inset 0 0 0 4px #f2d36f!important}.visualDanger{box-shadow:inset 0 0 0 4px #ff7a72!important}
+
+.visualGuide{margin:10px 0 12px;padding:13px 14px;border:1px solid #435168;border-radius:16px;background:#151d28;box-shadow:0 12px 34px rgba(0,0,0,.22)}
+.visualGuide[hidden]{display:none}.visualGuideHead{display:flex;justify-content:space-between;align-items:center;gap:12px}.visualGuideHead span{font-size:13px;font-weight:850;color:#9fc5ff;text-transform:uppercase;letter-spacing:.04em}
+.visualGuideClose{width:36px;height:36px;border:1px solid #3d495c;border-radius:999px;background:#1b2330;color:#fff;font-size:23px;line-height:1}
+.visualGuide strong{display:block;margin:6px 0 4px;font-size:18px}.visualGuide p{margin:0;color:#c7d0dc;line-height:1.45}
+.visualGuideActions{display:flex;gap:8px;margin-top:12px}.visualGuideActions button{flex:1}.visualAuto{width:100%;margin-top:8px}
+.boardWrap.visualPulse{animation:boardPulse 1.15s ease-out}@keyframes boardPulse{0%{box-shadow:0 0 0 0 rgba(150,234,121,.75)}55%{box-shadow:0 0 0 10px rgba(150,234,121,.18)}100%{box-shadow:0 0 0 0 rgba(150,234,121,0)}}
+
+.visualRole{display:inline-flex;align-items:center;margin-top:8px;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:900;letter-spacing:.055em;border:1px solid #526077;background:#202a38;color:#dce5f1}
+.visualRole.yours{border-color:#4e89c9;background:#173252;color:#a9d2ff}
+.visualRole.opponent{border-color:#bb6c4a;background:#472419;color:#ffc0a4}
+.visualRole.strong{border-color:#4e9b68;background:#163b24;color:#a9efbd}
+.visualRole.result{border-color:#b99a42;background:#403616;color:#f5dc89}
+.visualRole.context{border-color:#5c6878;background:#232b35;color:#d7dee8}
+
+.sq.cueFrom{box-shadow:inset 0 0 0 4px #7ebcff!important}
+.sq.cueTarget{box-shadow:inset 0 0 0 4px #f3d65f!important}
+.sq.cueTarget:before{content:"";position:absolute;inset:0;background:rgba(243,214,95,.34);z-index:0;pointer-events:none;animation:targetGlow 1s ease-in-out infinite alternate}
+.sq.cueCapture{box-shadow:inset 0 0 0 4px #ff806f!important}
+.sq.cueCapture:before{background:rgba(255,112,92,.27)}
+@keyframes targetGlow{from{opacity:.48}to{opacity:1}}
+.moveArrow{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible;filter:drop-shadow(0 2px 2px rgba(0,0,0,.28))}
+.moveArrow path{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.moveArrow.yours path,.moveArrow.yours polygon{stroke:#76b7ff;fill:#76b7ff}
+.moveArrow.opponent path,.moveArrow.opponent polygon{stroke:#ff9a68;fill:#ff9a68}
+.moveArrow.strong path,.moveArrow.strong polygon{stroke:#8ee874;fill:#8ee874}
+.moveArrow.context path,.moveArrow.context polygon,.moveArrow.result path,.moveArrow.result polygon{stroke:#f3d65f;fill:#f3d65f}
+.captureVictim{animation:captureWarning .55s ease-in-out infinite alternate}
+.captureTaken{opacity:0!important;transform:scale(.48)!important;filter:drop-shadow(0 0 8px #ff624f)!important;transition:opacity .28s ease,transform .28s ease,filter .28s ease!important}
+@keyframes captureWarning{from{filter:drop-shadow(0 0 0 rgba(255,98,79,0))}to{filter:drop-shadow(0 0 9px rgba(255,98,79,.95))}}
+.moveGhost{transition-timing-function:cubic-bezier(.2,.72,.2,1)!important}
+@media(prefers-reduced-motion:reduce){.sq.cueTarget:before,.captureVictim{animation:none}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="knight">♞</span><span>Chess Doctor</span><span class="poc">Beta</span></div><button type="button" class="feedbackHeader" id="feedbackOpen">Отзыв</button></header>
+<main>
+<section class="betaIntro" aria-label="Как попробовать Chess Doctor">
+    <strong>Разбор шахмат без языка движка.</strong>
+    <span>Вставь свою партию — Chess Doctor найдёт несколько важных моментов, объяснит их обычными словами и даст попробовать другой ход.</span>
+    <ol><li>Вставь PGN партии</li><li>Выбери, за кого играл</li><li>Нажми «Разобрать мою партию»</li></ol>
+    <details><summary>Что такое PGN и где его взять?</summary><p>PGN — текстовая запись партии. На Chess.com или Lichess открой завершённую партию и найди экспорт/скачивание PGN, затем скопируй весь текст сюда. Если своей партии сейчас нет — ниже уже загружен пример.</p></details>
+    <small>Это beta. Если объяснение покажется странным или неверным — такой отзыв для нас особенно полезен.</small>
+  </section>
+  <nav class="modeSwitch" aria-label="Выбор режима"><button class="modeBtn active" id="myGame">Разобрать мою партию</button><button class="modeBtn" id="masters">Известные партии</button></nav>
+<div id="myGameFlow">
+<section class="hero">
+<h1>Где я всё испортил?</h1>
+<p>Doctor разберёт только твои ходы и постарается объяснить главное обычными словами.</p><div class="sampleNotice">Сейчас в поле уже загружена тестовая партия. Можешь сразу попробовать её или заменить своим PGN.</div>
+<div class="sideBox">
+  <div class="sideLabel">За кого ты играл?</div>
+  <div class="seg"><button type="button" id="sideW" class="active">⚪ Я играл белыми</button><button type="button" id="sideB">⚫ Я играл чёрными</button></div>
+  <div class="sideNote">Доска повернётся твоей стороной вниз, а ошибки соперника не будут записываться на тебя.</div>
+</div>
+<textarea id="pgn">[Event "PoC Sample"]
+[Site "Local"]
+[Date "2026.09.17"]
+[Round "-"]
+[White "Beginner"]
+[Black "Friend"]
+[Result "0-1"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Nd4 4. Nxe5? Qg5 5. Bxf7+ Ke7 6. O-O Qxe5 7. Bxg8 Rxg8 8. c3 Ne6 9. d4 Qxe4 0-1</textarea>
+<div class="row"><button type="button" class="primary" id="analyze">Разобрать мою партию</button><button type="button" class="ghost" id="sample">Загрузить пример</button><button class="ghost" id="stopMy" hidden>Остановить</button></div>
+<label class="analysisOptions">Начать с хода № <input id="startMove" type="number" min="1" value="1" inputmode="numeric" aria-label="Первый ход для анализа"></label>
+<div class="status" id="status" role="status" aria-live="polite">Можно сразу разобрать тестовый пример или вставить свою партию.</div>
+<div class="progress" id="progress"><i></i></div>
+<div class="hint">За один запуск проверяется фрагмент примерно в 12 полных ходов, начиная с выбранного номера. Первый анализ может занять немного времени.</div>
+</section>
+<section class="results" id="results">
+<div class="modeSwitch"><button type="button" id="modeDoctor" class="modeBtn active">🩺 Doctor</button><button type="button" id="modeDetective" class="modeBtn detective">🕵️ Detective</button></div>
+<div class="sectionTitle" id="resultsTitle">Твои главные моменты</div>
+<div class="issueTabs" id="tabs"></div>
+<div class="visualGuide" id="visualGuide" hidden>
+  <div class="visualGuideHead"><span id="visualGuideStep">Шаг 1</span><button type="button" class="visualGuideClose" id="visualGuideClose" aria-label="Закрыть">×</button></div>
+  <div class="visualRole context" id="visualGuideRole">ПОЗИЦИЯ ДО ХОДА</div>
+  <strong id="visualGuideTitle">Смотрим позицию</strong>
+  <p id="visualGuideText">Здесь будет короткое объяснение текущего шага.</p>
+  <div class="visualGuideActions">
+    <button type="button" class="ghost" id="visualPrev">← Назад</button>
+    <button type="button" class="primary" id="visualNext">Дальше →</button>
+  </div>
+  <button type="button" class="ghost visualAuto" id="visualAuto">▶ Автопоказ</button>
+</div>
+<div class="boardWrap" id="boardStage"><div class="board" id="board"></div></div>
+<div class="boardNav" id="boardNav" hidden></div>
+<div class="legend"><span><i class="dot" style="background:#76b7ff"></i>откуда ты пошёл</span><span><i class="dot" style="background:#96ea79"></i>куда ты пошёл</span><span><i class="dot" style="background:#ffb266"></i>откуда пошёл соперник</span><span><i class="dot" style="background:#ff7a7a"></i>куда пошёл соперник</span></div>
+<div class="card" id="card"></div>
+</section>
+</div>
+<section id="masterFlow" hidden></section>
+<div class="footer">Chess Doctor · Beta v0.6.9. Для быстрого поиска оценки отдельные позиции могут отправляться Lichess без PGN и имён игроков; если готовой оценки нет, анализ продолжается локально. Шахматная логика: chess.js; локальный движок: Stockfish 19 Lite, GPLv3.</div>
+  <dialog id="feedbackDialog" aria-labelledby="feedbackTitle">
+    <form method="dialog" class="feedbackCard">
+      <div class="feedbackTop"><div><div class="eyebrow">Beta feedback</div><h2 id="feedbackTitle">Расскажи, что сработало плохо</h2></div><button class="feedbackClose" value="cancel" aria-label="Закрыть">×</button></div>
+      <p class="muted">Можно написать пару слов. Особенно полезны непонятные места и неверные шахматные объяснения.</p>
+      <label class="feedbackLabel">Что было непонятно?<textarea id="feedbackUnclear" placeholder="Например: не понял, где взять PGN…"></textarea></label>
+      <label class="feedbackLabel">Doctor сказал что-то странное или неверное?<textarea id="feedbackWrong" placeholder="Опиши момент или ход, если помнишь"></textarea></label>
+      <label class="feedbackLabel">Хотелось бы разобрать ещё одну свою партию?
+        <select id="feedbackReturn"><option value="Не ответил">—</option><option>Да</option><option>Не уверен</option><option>Нет</option></select>
+      </label>
+      <button type="button" class="primary feedbackCopy" id="feedbackCopy">Скопировать отзыв</button>
+      <div id="feedbackStatus" class="feedbackStatus" role="status" aria-live="polite"></div>
+      <small class="feedbackPrivacy">Ничего не отправляется автоматически. После копирования просто вставь текст туда, где получил ссылку на Chess Doctor.</small>
+    </form>
+  </dialog>
+</main>
+<script>
+const SAMPLE=document.getElementById('pgn').value;
+const $=s=>document.querySelector(s);
+const VALUE={p:100,n:320,b:330,r:500,q:900,k:0};
+const PIECE_NAME={p:'пешкой',n:'конём',b:'слоном',r:'ладьёй',q:'ферзём',k:'королём'};
+const PIECE_NAME_ACC={p:'пешку',n:'коня',b:'слона',r:'ладью',q:'ферзя',k:'короля'};
+const COLOR_NAME={w:'белыми',b:'чёрными'};
+let runId=0;
+const evaluationService=new EvaluationService('vendor/stockfish-19-lite-single.js');
+let state={issues:[],selected:0,retry:null,evals:[],positions:[],moves:[],startPly:0,view:'before',userColor:'w',mode:'doctor',detective:{cursor:0,guess:null}};
+let doctorVisualToken=0,doctorVisualLesson=null;
+
+$('#sideW').onclick=()=>setSide('w'); $('#sideB').onclick=()=>setSide('b');
+$('#stopMy').onclick=()=>{clearAnalysisState();setStatus('Анализ остановлен. Можно запустить снова.');};
+$('#sample').onclick=resetExample; $('#analyze').onclick=analyzeGame;
+$('#modeDoctor').onclick=()=>setMode('doctor'); $('#modeDetective').onclick=()=>setMode('detective');
+$('#pgn').addEventListener('input',()=>invalidateAnalysis('Партия изменена — нажми «Разобрать мою партию».'));
+$('#startMove').addEventListener('input',()=>invalidateAnalysis('Начальный ход изменён — запусти анализ ещё раз.'));
+syncModeButtons();
+$('#visualPrev').onclick=visualPrevStep;$('#visualNext').onclick=visualNextStep;$('#visualAuto').onclick=autoplayDoctorVisual;$('#visualGuideClose').onclick=closeDoctorVisualLesson;
+
+const feedbackDialog=$('#feedbackDialog');
+$('#feedbackOpen').onclick=()=>feedbackDialog.showModal();
+function feedbackText(){
+  return [
+    'Chess Doctor Beta — отзыв',
+    '',
+    'Что было непонятно:',
+    ($('#feedbackUnclear').value||'—').trim(),
+    '',
+    'Что показалось странным или неверным:',
+    ($('#feedbackWrong').value||'—').trim(),
+    '',
+    'Хотелось бы разобрать ещё одну свою партию: '+$('#feedbackReturn').value
+  ].join('\n');
+}
+$('#feedbackCopy').onclick=async()=>{
+  const text=feedbackText(),status=$('#feedbackStatus');
+  try{
+    await navigator.clipboard.writeText(text);
+    status.textContent='✅ Отзыв скопирован. Теперь вставь его в сообщение.';
+  }catch(_){
+    status.textContent='Не удалось скопировать автоматически. Выдели текст ниже и скопируй вручную.';
+    const box=document.createElement('textarea');box.value=text;box.readOnly=true;box.style.minHeight='190px';status.after(box);box.select();
+  }
+};
+
+function clearAnalysisState(){doctorVisualToken++;doctorVisualLesson=null;const vg=$('#visualGuide');if(vg)vg.hidden=true;runId++;evaluationService.cancel();$('#analyze').disabled=false;$('#stopMy').hidden=true;state.issues=[];state.selected=0;state.retry=null;state.evals=[];state.positions=[];state.moves=[];state.startPly=0;state.view='before';state.detective={cursor:0,guess:null};$('#results').classList.remove('show');$('#tabs').innerHTML='';$('#board').innerHTML='';$('#card').innerHTML='';$('#boardNav').hidden=true;$('#progress').style.display='none';$('#progress i').style.width='0';}
+function invalidateAnalysis(message){const hadResults=$('#results').classList.contains('show')||state.issues.length>0;clearAnalysisState();if(message&&hadResults)setStatus(message);}
+function setSide(c){
+  if(state.userColor===c){$('#sideW').classList.toggle('active',c==='w');$('#sideB').classList.toggle('active',c==='b');return;}
+  state.userColor=c;$('#sideW').classList.toggle('active',c==='w');$('#sideB').classList.toggle('active',c==='b');
+  clearAnalysisState();
+  setStatus(`Теперь разбираем твои ходы за ${c==='w'?'белых':'чёрных'}. Нажми «Разобрать мою партию».`);
+}
+function resetExample(){
+  $('#pgn').value=SAMPLE;
+  $('#startMove').value='1';
+  state.userColor='w';
+  $('#sideW').classList.add('active');$('#sideB').classList.remove('active');
+  clearAnalysisState();
+  setStatus('Пример восстановлен. Он настроен на игру за белых — можно сразу нажать «Разобрать мою партию».');
+  $('#sample').blur();
+  document.querySelector('.hero').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function setStatus(t,pct){$('#status').textContent=t;if(pct==null){$('#progress').style.display='none';return;}$('#progress').style.display='block';$('#progress i').style.width=Math.max(0,Math.min(100,pct))+'%';}
+function syncModeButtons(){
+  $('#modeDoctor').classList.toggle('active',state.mode==='doctor');
+  $('#modeDetective').classList.toggle('active',state.mode==='detective');
+  $('#modeDoctor').setAttribute('aria-pressed',String(state.mode==='doctor'));
+  $('#modeDetective').setAttribute('aria-pressed',String(state.mode==='detective'));
+  $('#resultsTitle').textContent=state.mode==='doctor'?'Твои главные моменты':'Режим Detective';
+}
+function setMode(mode){
+  if(mode!=='doctor'&&mode!=='detective')return;
+  state.mode=mode;state.retry=null;syncModeButtons();
+  if(mode==='detective'&&state.moves.length&&state.issues.length&&!Number.isInteger(state.detective?.cursor))resetDetective();
+  render();
+}
+function detectiveWindow(){
+  const target=state.issues[0];
+  if(!target)return{start:0,end:Math.max(0,state.moves.length-1)};
+  return{start:Math.max(0,target.i-4),end:Math.min(state.moves.length-1,target.i+2)};
+}
+function resetDetective(){
+  const w=detectiveWindow();
+  state.detective={cursor:w.start,guess:null};
+}
+function detectiveStep(delta){
+  if(!state.moves.length)return;
+  const w=detectiveWindow();
+  state.detective.cursor=Math.max(w.start,Math.min(w.end,state.detective.cursor+delta));
+  state.detective.guess=null;renderDetective();
+}
+function detectiveGuess(){
+  if(!state.moves.length||!state.issues.length)return;
+  const i=state.detective.cursor,mv=state.moves[i];
+  if(!mv||mv.color!==state.userColor)return;
+  const issueIndex=state.issues.findIndex(x=>x.i===i);
+  state.detective.guess={moveIndex:i,issueIndex};renderDetective();
+}
+function continueDetective(){state.detective.guess=null;renderDetective();}
+function retryDetective(){resetDetective();renderDetective();setTimeout(()=>document.querySelector('#board')?.scrollIntoView({behavior:'smooth',block:'start'}),0);}
+function openDoctorFromDetective(){
+  const g=state.detective.guess;
+  if(g&&g.issueIndex>=0)state.selected=g.issueIndex;else state.selected=0;
+  state.mode='doctor';state.retry=null;syncModeButtons();render();
+}
+
+function validatedUciMove(fen,uci){if(!uci||uci.length<4)return null;try{const g=new Chess(fen);const obj={from:uci.slice(0,2),to:uci.slice(2,4)};if(uci.length>4)obj.promotion=uci[4];const m=g.move(obj);return m||null;}catch(e){return null;}}
+function moveColorFromFen(fen){return fen.split(' ')[1];}
+function sideWord(color){return color==='w'?'белые':'чёрные';}
+function promotionText(m){return m&&m.promotion?` Пешка превратилась в ${PIECE_NAME_ACC[m.promotion]}.`:'';}
+function humanMove(m,actor='you'){if(!m)return'';const piece=PIECE_NAME[m.piece]||'фигурой';const isYou=actor==='you'||actor==='Ты';const subject=isYou?'Ты':(m.color==='w'?'Белые':'Чёрные');const moved=isYou?'передвинул':'передвинули',went=isYou?'сходил':'сходили',did=isYou?'сделал':'сделали',took=isYou?'забрал':'забрали';if(m.flags&&m.flags.includes('k'))return`${subject} ${did} короткую рокировку.`;if(m.flags&&m.flags.includes('q'))return`${subject} ${did} длинную рокировку.`;if(m.captured)return`${subject} ${went} ${piece} с ${m.from} на ${m.to} и ${took} ${PIECE_NAME_ACC[m.captured]} соперника.${promotionText(m)}`;return`${subject} ${moved} ${piece} с ${m.from} на ${m.to}.${promotionText(m)}`;}
+function humanSuggestion(m){if(!m)return'';const piece=PIECE_NAME[m.piece]||'фигурой';if(m.flags&&m.flags.includes('k'))return'Можно было сделать короткую рокировку.';if(m.flags&&m.flags.includes('q'))return'Можно было сделать длинную рокировку.';if(m.captured)return`Можно было сходить ${piece} с ${m.from} на ${m.to} и забрать ${PIECE_NAME_ACC[m.captured]} соперника.${promotionText(m)}`;return`Можно было передвинуть ${piece} с ${m.from} на ${m.to}.${promotionText(m)}`;}
+function choiceMoveText(m){if(!m)return'';if(m.flags&&m.flags.includes('k'))return'Короткая рокировка';if(m.flags&&m.flags.includes('q'))return'Длинная рокировка';const nom={p:'Пешка',n:'Конь',b:'Слон',r:'Ладья',q:'Ферзь',k:'Король'};return`${nom[m.piece]||'Фигура'} ${m.from} → ${m.to}`;}
+function choiceCaptureText(m){if(!m||!m.captured)return'Без взятия';const nom={p:'пешку',n:'коня',b:'слона',r:'ладью',q:'ферзя',k:'короля'};return`Взял ${nom[m.captured]||'фигуру'} соперника`;}
+function pieceSimpleValue(type){return({p:1,n:3,b:3,r:5,q:9,k:null})[type]??null;}
+function pieceNom(type){return({p:'пешка',n:'конь',b:'слон',r:'ладья',q:'ферзь',k:'король'})[type]||'фигура';}
+function piecePossessive(type){return(type==='p'||type==='r')?'твоя':'твой';}
+function piecePronoun(type){return(type==='p'||type==='r')?'её':'его';}
+function pieceVerb(type,masc,fem){return(type==='p'||type==='r')?fem:masc;}
+function valueExplanation(x,best){if(!x.move.captured||!best||!best.captured)return'';const a=pieceSimpleValue(x.move.captured),b=pieceSimpleValue(best.captured);if(a==null||b==null||b<=a)return'';const names={p:'пешку',n:'коня',b:'слона',r:'ладью',q:'ферзя'};return`<div class="valueNote"><strong>Почему это заметная разница:</strong> для быстрого ориентира ${names[x.move.captured]} обычно оценивают примерно в ${a}, а ${names[best.captured]} — примерно в ${b}. Это не абсолютное правило, но здесь хорошо видно, почему второе взятие было ценнее.</div>`;}
+function opponentReplyText(issue){const r=issue.reply;if(!r)return'Партия закончилась или следующего хода в анализируемом фрагменте нет.';return humanMove(r,'side');}
+function pieceImmediatelyCapturable(issue){try{const g=new Chess(issue.postFen);if(defenderSquares(issue.postFen,issue.move.color,issue.move.to).length)return false;return g.moves({verbose:true}).some(m=>m.to===issue.move.to&&m.captured===issue.move.piece);}catch(e){return false;}}
+function withTurn(fen,color){const parts=fen.split(' ');parts[1]=color;return parts.join(' ');}
+function squareXY(sq){return{f:'abcdefgh'.indexOf(sq[0]),r:Number(sq[1])-1};}
+function pathClear(game,from,to){const a=squareXY(from),b=squareXY(to),df=Math.sign(b.f-a.f),dr=Math.sign(b.r-a.r);let f=a.f+df,r=a.r+dr;while(f!==b.f||r!==b.r){if(game.get('abcdefgh'[f]+(r+1)))return false;f+=df;r+=dr;}return true;}
+function pseudoAttacksSquare(game,from,to){const p=game.get(from);if(!p||from===to)return false;const a=squareXY(from),b=squareXY(to),dx=b.f-a.f,dy=b.r-a.r,adx=Math.abs(dx),ady=Math.abs(dy);if(p.type==='p')return adx===1&&dy===(p.color==='w'?1:-1);if(p.type==='n')return(adx===1&&ady===2)||(adx===2&&ady===1);if(p.type==='k')return Math.max(adx,ady)===1;if(p.type==='b')return adx===ady&&pathClear(game,from,to);if(p.type==='r')return(dx===0||dy===0)&&pathClear(game,from,to);if(p.type==='q')return((adx===ady)||(dx===0||dy===0))&&pathClear(game,from,to);return false;}
+function defenderSquares(fen,color,sq){try{const g=new Chess(fen),out=[];for(const f of 'abcdefgh')for(let r=1;r<=8;r++){const from=f+r,p=g.get(from);if(p&&p.color===color&&from!==sq&&pseudoAttacksSquare(g,from,sq))out.push(from);}return out;}catch(e){return[];}}
+function removedDefenderInfo(issue){
+  if(!issue.reply||!issue.reply.captured)return null;
+  try{
+    const before=new Chess(issue.preFen),victim=before.get(issue.reply.to),moved=before.get(issue.move.from),attacker=before.get(issue.reply.from);
+    if(!victim||victim.color!==issue.move.color||!moved||moved.color!==issue.move.color||!attacker||attacker.color===issue.move.color)return null;
+    const beforeDefs=defenderSquares(issue.preFen,issue.move.color,issue.reply.to),afterDefs=defenderSquares(issue.postFen,issue.move.color,issue.reply.to);
+    if(!beforeDefs.includes(issue.move.from))return null;
+    if(afterDefs.includes(issue.move.to))return null;
+    if(afterDefs.length>=beforeDefs.length)return null;
+    return{victimSq:issue.reply.to,victimType:victim.type,attackerFrom:issue.reply.from,attackerType:attacker.type,defenderFrom:issue.move.from,defenderTo:issue.move.to,defenderType:moved.type,beforeDefs,afterDefs};
+  }catch(e){return null;}
+}
+function replyCaptureWasAlreadyAvailable(issue){
+  if(!issue.reply||!issue.reply.captured)return false;
+  try{
+    const opp=issue.reply.color,g=new Chess(withTurn(issue.preFen,opp));
+    const exact=g.moves({verbose:true}).some(m=>m.from===issue.reply.from&&m.to===issue.reply.to&&m.captured===issue.reply.captured);
+    if(!exact)return false;
+    return defenderSquares(issue.preFen,issue.move.color,issue.reply.to).length===0;
+  }catch(e){return false;}
+}
+function wasInCheckBefore(issue){try{return new Chess(issue.preFen).in_check();}catch(e){return false;}}
+function replyIsDirectConsequence(issue){
+  if(removedDefenderInfo(issue))return true;
+  if(replyCaptureWasAlreadyAvailable(issue))return true;
+  if(issue.reply&&issue.reply.captured&&issue.reply.to===issue.move.to)return true;
+  return false;
+}
+function severityWords(loss){if(loss>=300)return'очень сильно';if(loss>=140)return'сильно';if(loss>=70)return'заметно';return'немного';}
+function issueType(x){
+  if(removedDefenderInfo(x))return'Ты убрал защитника своей фигуры';
+  if(replyCaptureWasAlreadyAvailable(x))return'Ты не спас фигуру, которая уже была под ударом';
+  if(wasInCheckBefore(x)&&x.move.piece==='k')return'Не самый удачный ответ на шах';
+  if(pieceImmediatelyCapturable(x))return'Фигура сразу оказалась под ударом';
+  if(x.move.captured)return'Взятие оказалось невыгодным';
+  if(x.move.piece==='q'&&x.loss>=100)return'Ферзь пошёл вперёд слишком рано';
+  return'Этот ход заметно ухудшил позицию';
+}
+function lessonText(x){
+  if(removedDefenderInfo(x))return`Перед тем как увести фигуру, проверь, что она сейчас защищает. Иногда ход хорош сам по себе, но после него другая твоя фигура остаётся без защиты.`;
+  if(replyCaptureWasAlreadyAvailable(x))return`Перед ходом сначала проверь свои фигуры, которые уже атакованы. Если угроза не исчезает после твоего хода, соперник всё ещё сможет воспользоваться ею.`;
+  if(wasInCheckBefore(x)&&x.move.piece==='k')return`Когда отвечаешь на шах, сравни несколько легальных способов выйти из него: куда уйдёт король и что останется под ударом после этого.`;
+  if(pieceImmediatelyCapturable(x))return`После выбора поля проверь, может ли соперник сразу забрать фигуру, которую ты туда поставил.`;
+  if(x.move.captured)return`Перед взятием задай два вопроса: «что я получаю?» и «чем соперник ответит сразу после этого?»`;
+  return`Перед своим ходом быстро просмотри три вещи у соперника: шахи, взятия и прямые угрозы.`;
+}
+function concreteWhy(x,best){
+  const rd=removedDefenderInfo(x);
+  if(rd){const victimAcc=PIECE_NAME_ACC[rd.victimType]||'фигуру',attacker=pieceNom(rd.attackerType),defender=pieceNom(rd.defenderType),attackVerb=pieceVerb(rd.attackerType,'атаковал','атаковала'),defendVerb=pieceVerb(rd.defenderType,'защищал','защищала'),pron=piecePronoun(rd.victimType);return`До твоего хода <strong>${victimAcc} на ${rd.victimSq}</strong> ${attackVerb} ${attacker} соперника с <strong>${rd.attackerFrom}</strong>. ${pron[0].toUpperCase()+pron.slice(1)} ${defendVerb} ${piecePossessive(rd.defenderType)} ${defender} с <strong>${rd.defenderFrom}</strong>. После хода ${rd.defenderFrom} → ${rd.defenderTo} эта защита исчезла, и соперник смог воспользоваться этим.`;}
+  if(replyCaptureWasAlreadyAvailable(x))return`Угроза этой фигуре существовала ещё до твоего хода. После твоего хода угроза не исчезла, и следующим ходом соперник реализовал её.`;
+  if(wasInCheckBefore(x)&&x.move.piece==='k'&&best)return`Ты вышел из шаха, но вариант ${choiceMoveText(best).toLowerCase()} сохранял позицию лучше. Следующий ход соперника здесь не считаю прямым наказанием за твой выбор.`;
+  if(x.move.captured)return`Взятие выглядело полезным, но оценка позиции после него ухудшилась. Простую тактическую причину здесь нельзя подтвердить одним ответом соперника, поэтому я её не придумываю.`;
+  if(pieceImmediatelyCapturable(x))return`После твоего хода фигура оказалась на поле, где соперник мог сразу её забрать.`;
+  return best?`Этот ход оказался слабее альтернативы ${choiceMoveText(best).toLowerCase()}. Надёжной прямой причины на следующем ходе соперника здесь нет, поэтому Doctor её не придумывает.`:`После этого хода позиция стала ${severityWords(x.loss)} хуже для твоей стороны. Надёжной простой причины пока нет, поэтому Doctor не будет её выдумывать.`;
+}
+function notationLine(x,best){let s=`Твой ход: ${x.move.san}`;if(x.reply)s+=` · следующий ход: ${x.reply.san}`;if(best)s+=` · сильнее: ${best.san}`;return s;}
+function categoryLabel(x){if(x.loss>=300)return'Критическая ошибка';if(x.loss>=150)return'Ошибка';return'Стоит разобрать';}
+function shortTabTitle(x){if(removedDefenderInfo(x))return`Убрал защитника`;if(replyCaptureWasAlreadyAvailable(x))return`Не спас фигуру под боем`;if(wasInCheckBefore(x)&&x.move.piece==='k')return`Ответ на шах`;if(pieceImmediatelyCapturable(x))return`Фигура под ударом`;if(x.move.captured)return`Невыгодное взятие`;if(x.move.piece==='q')return`Рискованный ход ферзём`;return`Стоит разобрать ход`;}
+function removedDefenderChain(x){
+  const rd=removedDefenderInfo(x);if(!rd||!x.reply)return'';
+  const victimAcc=PIECE_NAME_ACC[rd.victimType]||'фигуру',attacker=pieceNom(rd.attackerType),defender=pieceNom(rd.defenderType),attackVerb=pieceVerb(rd.attackerType,'атаковал','атаковала'),defendVerb=pieceVerb(rd.defenderType,'защищал','защищала'),pron=piecePronoun(rd.victimType);
+  return `<div class="causeChain">
+    <div class="causeStep"><div class="causeIcon">1</div><div><strong>До твоего хода:</strong> ${victimAcc} на <strong>${rd.victimSq}</strong> ${attackVerb} ${attacker} соперника с <strong>${rd.attackerFrom}</strong>. ${pron[0].toUpperCase()+pron.slice(1)} ${defendVerb} ${piecePossessive(rd.defenderType)} ${defender} с <strong>${rd.defenderFrom}</strong>.</div></div>
+    <div class="causeStep"><div class="causeIcon">2</div><div><strong>Твой ход:</strong> ${humanMove(x.move,'Ты')}</div></div>
+    <div class="causeStep"><div class="causeIcon">3</div><div><strong>После хода:</strong> ${defender} ушёл с ${rd.defenderFrom}, и ${pieceNom(rd.victimType)} на ${rd.victimSq} ${pieceVerb(rd.victimType,'остался','осталась')} без этой защиты.</div></div>
+    <div class="causeStep danger"><div class="causeIcon">4</div><div><strong>Ответ соперника:</strong> ${humanMove(x.reply,'side')}</div></div>
+  </div>`;
+}
+
+
+async function analyzeGame(){
+ if(typeof Chess==='undefined'){setStatus('Не загрузилась шахматная библиотека. Обнови страницу.');return;}
+ const currentRun=++runId,btn=$('#analyze');evaluationService.cancel();btn.disabled=true;$('#stopMy').hidden=false;state.issues=[];state.retry=null;$('#results').classList.remove('show');let game=new Chess(),pgn=$('#pgn').value.trim();
+ try{if(!game.load_pgn(pgn,{sloppy:true}))throw new Error('bad pgn');}catch(e){setStatus('Не удалось прочитать PGN. Попробуй другой текст партии.');btn.disabled=false;$('#stopMy').hidden=true;return;}
+ const history=game.history({verbose:true});if(!history.length){setStatus('В PGN нет ходов.');btn.disabled=false;$('#stopMy').hidden=true;return;}
+ const requested=Number($('#startMove').value);
+ if(!Number.isInteger(requested)||requested<1||2*(requested-1)>=history.length){setStatus(`Выбери номер хода от 1 до ${Math.ceil(history.length/2)}.`);btn.disabled=false;$('#stopMy').hidden=true;return;}
+ const headers=game.header(),initialFen=headers.FEN||undefined;
+ let replay;
+ try{replay=initialFen?new Chess(initialFen):new Chess();}catch(e){setStatus('Начальная позиция FEN в PGN неверна.');btn.disabled=false;$('#stopMy').hidden=true;return;}
+ const startPly=2*(requested-1),maxPlies=Math.min(history.length,startPly+24),moves=[];
+ for(let i=0;i<startPly;i++)if(!replay.move(history[i].san,{sloppy:true})){setStatus('Не удалось восстановить начало партии.');btn.disabled=false;$('#stopMy').hidden=true;return;}
+ const positions=[replay.fen()];
+ for(let i=startPly;i<maxPlies;i++){const mv=replay.move(history[i].san,{sloppy:true});if(!mv)break;moves.push(mv);positions.push(replay.fen());}
+ state.startPly=startPly;state.positions=positions;state.moves=moves;state.evals=[];
+ try {
+   const result=await Analysis.scan(evaluationService,positions,moves,{side:state.userColor,active:()=>currentRun===runId,progress:setStatus});
+   if(currentRun!==runId)return;
+   state.evals=result.evals;const issues=result.issues;
+   state.issues=issues;state.selected=0;state.view='before';state.retry=null;state.mode='doctor';resetDetective();
+   const localCount=state.evals.filter(x=>x.source==='local').length;
+   setStatus(`Готово: ${Analysis.plural(issues.length)} для разбора. ${localCount?'Недостающие позиции проверены на твоём устройстве.':''}`,100);
+   setTimeout(()=>{if(currentRun===runId)$('#progress').style.display='none';},700);
+   btn.disabled=false;$('#stopMy').hidden=true;$('#results').classList.add('show');render();
+   setTimeout(()=>{if(currentRun===runId)$('#results').scrollIntoView({behavior:'smooth',block:'start'});},150);
+ } catch(e){
+   if(currentRun!==runId)return;
+   btn.disabled=false;$('#stopMy').hidden=true;setStatus('Анализ не завершён: '+(e.message||'локальный движок недоступен')+'. Попробуй обновить страницу.');
+ }
+}
+
+function pieceSvg(p){
+ const white=p.color==='w',fill=white?'#f4f6ef':'#15191e',stroke=white?'#2a3540':'#020304';
+ const common=`fill="${fill}" stroke="${stroke}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"`;
+ let shape='';
+ if(p.type==='p')shape=`<circle cx="50" cy="29" r="12" ${common}/><path d="M39 43 H61 L65 51 H35 Z" ${common}/><path d="M38 53 C39 62 36 68 32 72 H68 C64 68 61 62 62 53 Z" ${common}/><path d="M28 78 H72 L78 87 H22 Z" ${common}/>`;
+ if(p.type==='r')shape=`<path d="M25 18 H36 V29 H45 V18 H55 V29 H64 V18 H75 V39 H68 L64 70 H36 L32 39 H25 Z" ${common}/><path d="M27 76 H73 L80 88 H20 Z" ${common}/>`;
+ if(p.type==='n')shape=`<path d="M31 73 C32 61 35 51 41 43 C46 36 53 32 60 28 L58 18 L66 23 L70 14 L73 30 C80 33 84 39 84 45 C84 50 81 54 76 57 C71 60 65 61 59 61 C61 66 63 70 64 73 Z" ${common}/><path d="M60 28 C54 31 48 36 44 42 C39 49 36 58 35 69" fill="none" stroke="${stroke}" stroke-width="4.2"/><path d="M73 31 C69 35 66 40 64 45" fill="none" stroke="${stroke}" stroke-width="3.6"/><path d="M77 56 C73 57 69 57 66 56" fill="none" stroke="${stroke}" stroke-width="3.6"/><circle cx="72" cy="38" r="3.1" fill="${stroke}" stroke="none"/><path d="M29 79 H72 L80 88 H20 Z" ${common}/>`;
+ if(p.type==='b')shape=`<path d="M50 11 C41 20 39 28 42 35 C44 40 47 43 50 45 C53 43 56 40 58 35 C61 28 59 20 50 11 Z" ${common}/><path d="M46 19 L55 33" fill="none" stroke="${stroke}" stroke-width="4.2"/><path d="M42 45 H58 L64 55 L58 70 H42 L36 55 Z" ${common}/><path d="M29 77 H71 L79 88 H21 Z" ${common}/>`;
+ if(p.type==='q')shape=`<circle cx="27" cy="23" r="6" ${common}/><circle cx="50" cy="16" r="6" ${common}/><circle cx="73" cy="23" r="6" ${common}/><path d="M27 31 L36 68 H64 L73 31 L58 45 L50 28 L42 45 Z" ${common}/><path d="M25 77 H75 L81 88 H19 Z" ${common}/>`;
+ if(p.type==='k')shape=`<path d="M50 9 V28 M40 18 H60" stroke="${stroke}" stroke-width="6"/><path d="M38 33 Q50 25 62 33 L68 47 L59 69 H41 L32 47 Z" ${common}/><path d="M26 77 H74 L80 88 H20 Z" ${common}/>`;
+ return `<svg class="piece ${white?'white':'black'}" data-piece="${p.type}" viewBox="0 0 100 100" aria-hidden="true">${shape}</svg>`;
+}
+function boardOrder(){return state.userColor==='w'?{ranks:[8,7,6,5,4,3,2,1],files:['a','b','c','d','e','f','g','h']}:{ranks:[1,2,3,4,5,6,7,8],files:['h','g','f','e','d','c','b','a']};}
+function renderBoard(fen,interactive,marks,target='#board',click=retryClick){
+ const g=(interactive&&state.retry)?state.retry.game:new Chess(fen),el=$(target);el.innerHTML='';const o=boardOrder();
+ for(let ri=0;ri<8;ri++)for(let fi=0;fi<8;fi++){
+   const sq=o.files[fi]+o.ranks[ri],p=g.get(sq),d=document.createElement('button');d.type='button';d.className='sq '+((ri+fi)%2?'dark':'light');d.dataset.sq=sq;d.setAttribute('aria-label',`${sq}: ${p?pieceNom(p.type)+' ('+(p.color==='w'?'белые':'чёрные')+')':'пусто'}`);
+   if(p)d.innerHTML=pieceSvg(p);if(fi===0)d.insertAdjacentHTML('beforeend',`<span class="coordRank">${o.ranks[ri]}</span>`);if(ri===7)d.insertAdjacentHTML('beforeend',`<span class="coordFile">${o.files[fi]}</span>`);
+   if(marks){if(sq===marks.playedFrom)d.classList.add('playedFrom');if(sq===marks.playedTo)d.classList.add('playedTo');if(sq===marks.replyFrom)d.classList.add('replyFrom');if(sq===marks.replyTo)d.classList.add('replyTo');if(marks.focus&&marks.focus.includes(sq))d.classList.add('visualFocus');if(marks.danger&&marks.danger.includes(sq))d.classList.add('visualDanger');if(marks.cueFrom===sq)d.classList.add('cueFrom');if(marks.cueTo===sq)d.classList.add('cueTarget');if(marks.cueCapture===sq)d.classList.add('cueCapture');}
+   if(interactive){d.onclick=()=>click(sq);if(state.retry.from===sq)d.classList.add('sel');if(state.retry.targets&&state.retry.targets.includes(sq))d.classList.add('target');if(!state.retry.from&&p&&p.color===g.turn()&&state.retry.showLegalSources!==false){if(state.retry.legalFrom&&state.retry.legalFrom.includes(sq))d.classList.add('canMove');else if(state.retry.inCheck)d.classList.add('unavailable');}}
+   el.appendChild(d);
+ }
+}
+function doctorWait(ms,token){return new Promise(resolve=>setTimeout(()=>resolve(token===doctorVisualToken),ms));}
+function showDoctorArrow(fromSq,toSq,role='context'){
+ const board=$('#board');if(!board)return;
+ board.querySelectorAll('.moveArrow').forEach(n=>n.remove());
+ const from=board.querySelector(`[data-sq="${fromSq}"]`),to=board.querySelector(`[data-sq="${toSq}"]`);if(!from||!to)return;
+ const br=board.getBoundingClientRect(),fr=from.getBoundingClientRect(),tr=to.getBoundingClientRect();
+ let x1=fr.left-br.left+fr.width/2,y1=fr.top-br.top+fr.height/2,x2=tr.left-br.left+tr.width/2,y2=tr.top-br.top+tr.height/2;
+ const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+ const start=Math.min(fr.width*.18,len*.18),end=Math.min(tr.width*.28,len*.24);
+ x1+=ux*start;y1+=uy*start;x2-=ux*end;y2-=uy*end;
+ const head=10,wing=6,bx=x2-ux*head,by=y2-uy*head,px=-uy,py=ux;
+ const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.classList.add('moveArrow',role||'context');svg.setAttribute('viewBox',`0 0 ${br.width} ${br.height}`);
+ const path=document.createElementNS(ns,'path');path.setAttribute('d',`M ${x1} ${y1} L ${x2} ${y2}`);
+ const poly=document.createElementNS(ns,'polygon');poly.setAttribute('points',`${x2},${y2} ${bx+px*wing},${by+py*wing} ${bx-px*wing},${by-py*wing}`);
+ svg.append(path,poly);board.appendChild(svg);
+}
+function renderDoctorMoveCue(preFen,move,role='context'){
+ const capture=!!move.captured;
+ renderBoard(preFen,false,{cueFrom:move.from,cueTo:move.to,...(capture?{cueCapture:move.to}:{})});
+ const board=$('#board'),victim=capture?board?.querySelector(`[data-sq="${move.to}"] .piece`):null;
+ if(victim)victim.classList.add('captureVictim');
+ showDoctorArrow(move.from,move.to,role);
+}
+async function animateDoctorMove(preFen,move,finalFen,marks,token,duration=1250,role='context'){
+ if(token!==doctorVisualToken)return false;
+ renderDoctorMoveCue(preFen,move,role);
+ if(!await doctorWait(620,token))return false;
+
+ const board=$('#board'),from=board?.querySelector(`[data-sq="${move.from}"]`),to=board?.querySelector(`[data-sq="${move.to}"]`),piece=from?.querySelector('.piece'),victim=move.captured?to?.querySelector('.piece'):null;
+ if(!board||!from||!to||!piece){renderBoard(finalFen,false,marks);showDoctorArrow(move.from,move.to,role);return true;}
+ const boardRect=board.getBoundingClientRect(),pieceRect=piece.getBoundingClientRect(),toRect=to.getBoundingClientRect();
+ const ghost=piece.cloneNode(true);ghost.classList.add('moveGhost');
+ Object.assign(ghost.style,{left:(pieceRect.left-boardRect.left)+'px',top:(pieceRect.top-boardRect.top)+'px',width:pieceRect.width+'px',height:pieceRect.height+'px',transitionDuration:duration+'ms'});
+ board.appendChild(ghost);piece.style.opacity='0';
+ const dx=(toRect.left+toRect.width/2)-(pieceRect.left+pieceRect.width/2),dy=(toRect.top+toRect.height/2)-(pieceRect.top+pieceRect.height/2);
+ if(victim)setTimeout(()=>{if(token===doctorVisualToken&&victim.isConnected){victim.classList.remove('captureVictim');victim.classList.add('captureTaken');}},Math.round(duration*.64));
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{if(token===doctorVisualToken)ghost.style.transform=`translate(${dx}px,${dy}px)`;}));
+ if(!await doctorWait(duration+90,token))return false;
+
+ renderBoard(finalFen,false,marks);showDoctorArrow(move.from,move.to,role);
+ const landed=$('#board')?.querySelector(`[data-sq="${move.to}"]`);if(landed)landed.classList.add(role==='opponent'?'replyTo':'playedTo');
+ return true;
+}
+function visualStatus(text){
+ const el=$('#visualExplainStatus');if(el)el.textContent=text;
+}
+function visualScrollToBoard(showGuide=true){
+  const guide=$('#visualGuide'),stage=$('#boardStage');
+  if(showGuide&&guide){guide.hidden=false;guide.scrollIntoView({behavior:'smooth',block:'start'});}
+  else if(stage)stage.scrollIntoView({behavior:'smooth',block:'start'});
+  if(stage){stage.classList.remove('visualPulse');void stage.offsetWidth;stage.classList.add('visualPulse');}
+}
+function buildDoctorVisualScenes(x){
+  const scenes=[],rd=removedDefenderInfo(x),direct=replyIsDirectConsequence(x),best=x.bestmove;
+  scenes.push({role:'context',roleLabel:'ПОЗИЦИЯ ДО ХОДА',title:'До твоего хода',text:rd?`Смотри на фигуру на ${rd.victimSq}: сейчас у неё ещё есть защита.`:'Сначала запомни позицию до твоего решения.',fen:x.preFen,marks:rd?{focus:[rd.victimSq]}:null});
+  scenes.push({role:'yours',roleLabel:'ТВОЙ ХОД',title:'Твой ход',text:humanMove(x.move,'Ты'),preFen:x.preFen,move:x.move,finalFen:x.postFen,marks:{playedFrom:x.move.from,playedTo:x.move.to,...(rd?{danger:[rd.victimSq]}:{})}});
+  if(rd)scenes.push({role:'result',roleLabel:'ПОСЛЕ ТВОЕГО ХОДА',title:'Что изменилось',text:`После твоего хода фигура на ${rd.victimSq} осталась без этой защиты.`,fen:x.postFen,marks:{playedFrom:x.move.from,playedTo:x.move.to,danger:[rd.victimSq]}});
+  if(direct&&x.reply&&state.positions[x.i+2])scenes.push({role:'opponent',roleLabel:'ХОД СОПЕРНИКА',title:'Ответ соперника',text:humanMove(x.reply,'side'),preFen:x.postFen,move:x.reply,finalFen:state.positions[x.i+2],marks:{replyFrom:x.reply.from,replyTo:x.reply.to}});
+  if(best){
+    try{
+      const g=new Chess(x.preFen),mv=g.move({from:best.from,to:best.to,...(best.promotion?{promotion:best.promotion}:{})});
+      if(mv)scenes.push({role:'strong',roleLabel:'СИЛЬНЫЙ ХОД',title:'Более сильный вариант',text:humanMove(mv,'side'),preFen:x.preFen,move:mv,finalFen:g.fen(),marks:{playedFrom:mv.from,playedTo:mv.to,focus:[mv.to]}});
+    }catch(_){}
+  }
+  return scenes;
+}
+function updateVisualGuide(){
+  const l=doctorVisualLesson;if(!l)return;
+  const scene=l.scenes[l.index],step=$('#visualGuideStep'),role=$('#visualGuideRole'),title=$('#visualGuideTitle'),text=$('#visualGuideText'),prev=$('#visualPrev'),next=$('#visualNext'),auto=$('#visualAuto');
+  if(step)step.textContent=`Шаг ${l.index+1} из ${l.scenes.length}`;
+  if(role){role.textContent=scene.roleLabel||'ШАГ';role.className='visualRole '+(scene.role||'context');}
+  if(title)title.textContent=scene.title;
+  if(text)text.textContent=scene.text;
+  if(prev)prev.disabled=l.index===0||l.playing;
+  if(next){next.disabled=l.playing;next.textContent=l.index===l.scenes.length-1?'Готово':'Дальше →';}
+  if(auto){auto.disabled=l.playing;auto.textContent=l.index===l.scenes.length-1?'▶ Показать сначала':'▶ Автопоказ';}
+}
+async function showDoctorVisualScene(indexValue,{animate=true,scroll=false}={}){
+  const l=doctorVisualLesson;if(!l)return;
+  const nextIndex=Math.max(0,Math.min(l.scenes.length-1,indexValue));l.index=nextIndex;
+  const scene=l.scenes[nextIndex],token=++doctorVisualToken;
+  updateVisualGuide();
+  if(scroll)visualScrollToBoard();
+  if(scene.move&&animate){
+    await animateDoctorMove(scene.preFen,scene.move,scene.finalFen,scene.marks,token,1250,scene.role||'context');
+  }else if(scene.move){
+    renderBoard(scene.finalFen,false,scene.marks||null);showDoctorArrow(scene.move.from,scene.move.to,scene.role||'context');
+  }else{
+    renderBoard(scene.fen||scene.finalFen,false,scene.marks||null);
+  }
+  if(token===doctorVisualToken)updateVisualGuide();
+}
+async function startDoctorVisualLesson(x){
+  doctorVisualToken++;doctorVisualLesson={x,scenes:buildDoctorVisualScenes(x),index:0,playing:false};
+  $('#boardNav').hidden=true;
+  const guide=$('#visualGuide');if(guide)guide.hidden=false;
+  visualStatus('Экран сам вернулся к доске. Теперь можно смотреть по шагам.');
+  await showDoctorVisualScene(0,{animate:false,scroll:true});
+}
+function closeDoctorVisualLesson(){
+  doctorVisualToken++;doctorVisualLesson=null;
+  const guide=$('#visualGuide');if(guide)guide.hidden=true;
+  const x=state.issues[state.selected];if(x){state.view='before';renderDoctorBoard(x);}
+}
+async function visualNextStep(){
+  const l=doctorVisualLesson;if(!l||l.playing)return;
+  if(l.index>=l.scenes.length-1){visualStatus('Готово. Можно запустить показ ещё раз или попробовать свой ход.');return;}
+  await showDoctorVisualScene(l.index+1,{animate:true,scroll:false});
+}
+async function visualPrevStep(){
+  const l=doctorVisualLesson;if(!l||l.playing)return;
+  await showDoctorVisualScene(l.index-1,{animate:false,scroll:false});
+}
+async function autoplayDoctorVisual(){
+  const l=doctorVisualLesson;if(!l||l.playing)return;
+  l.playing=true;
+  if(l.index===l.scenes.length-1)l.index=0;
+  updateVisualGuide();
+  await showDoctorVisualScene(l.index,{animate:false,scroll:true});
+  if(!await doctorWait(1200,doctorVisualToken)){l.playing=false;return;}
+  while(doctorVisualLesson===l&&l.index<l.scenes.length-1){
+    await showDoctorVisualScene(l.index+1,{animate:true,scroll:false});
+    if(doctorVisualLesson!==l)break;
+    if(!await doctorWait(1800,doctorVisualToken))break;
+  }
+  if(doctorVisualLesson===l){l.playing=false;updateVisualGuide();visualStatus('Автопоказ закончен. Можно пройти шаги вручную.');}
+}
+function renderDoctorBoard(x){
+ const nav=$('#boardNav'),views=[{key:'before',label:'До хода',fen:x.preFen,marks:null},{key:'after',label:'После моего',fen:x.postFen,marks:{playedFrom:x.move.from,playedTo:x.move.to}}];
+ if(x.reply&&state.positions[x.i+2])views.push({key:'reply',label:'После ответа',fen:state.positions[x.i+2],marks:{replyFrom:x.reply.from,replyTo:x.reply.to}});
+ if(!views.some(v=>v.key===state.view))state.view='before';
+ nav.hidden=false;nav.innerHTML='';
+ views.forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v.label;b.className=state.view===v.key?'active':'';b.setAttribute('aria-pressed',String(state.view===v.key));b.onclick=()=>{doctorVisualToken++;doctorVisualLesson=null;const vg=$('#visualGuide');if(vg)vg.hidden=true;state.view=v.key;renderDoctorBoard(x);};nav.appendChild(b);});
+ const chosen=views.find(v=>v.key===state.view);renderBoard(chosen.fen,false,chosen.marks);
+}
+function preThreatChain(x){
+  if(!replyCaptureWasAlreadyAvailable(x)||!x.reply)return'';
+  try{
+    const g=new Chess(x.preFen),victim=g.get(x.reply.to),attacker=g.get(x.reply.from);
+    if(!victim||!attacker)return'';
+    const victimName=pieceNom(victim.type),attackerName=pieceNom(attacker.type);
+    const userMove=humanMove(x.move,'Ты'),reply=humanMove(x.reply,'side');
+    return `<div class="causeChain">
+      <div class="causeStep"><div class="causeIcon">1</div><div><strong>До твоего хода:</strong> ${victimName} на <strong>${x.reply.to}</strong> уже была под атакой ${attackerName} с <strong>${x.reply.from}</strong> и не имела простого защитника.</div></div>
+      <div class="causeStep"><div class="causeIcon">2</div><div><strong>Твой ход:</strong> ${userMove}</div></div>
+      <div class="causeStep"><div class="causeIcon">3</div><div><strong>После хода:</strong> угроза ${x.reply.to} осталась.</div></div>
+      <div class="causeStep danger"><div class="causeIcon">4</div><div><strong>Ответ соперника:</strong> ${reply}</div></div>
+    </div>`;
+  }catch(e){return'';}
+}
+function alternativeBlock(best){
+ if(best)return `<div class="better"><div class="stepLabel">Сильнее было</div><div class="betterText">${humanSuggestion(best)}</div></div>`;
+ return `<div class="noAlt">ℹ️ Для этой позиции нет достаточно надёжной альтернативы, поэтому Doctor её не показывает.</div>`;
+}
+
+function render(){syncModeButtons();if(state.mode==='detective')return renderDetective();return renderDoctor();}
+function renderDetective(){
+ const tabs=$('#tabs'),legend=document.querySelector('.legend');tabs.innerHTML='';tabs.style.display='none';if(legend)legend.style.display='none';
+ $('#boardNav').hidden=true;
+ if(!state.moves.length){$('#board').innerHTML='';$('#card').innerHTML='<div class="detectiveNoIssue">Сначала разбери партию — после анализа Detective сможет дать тебе задачу.</div>';return;}
+ if(!state.issues.length){renderBoard(state.positions[0],false,null);$('#card').innerHTML='<div class="eyebrow">Detective</div><h2>Здесь нечего угадывать</h2><div class="detectiveNoIssue">В этом фрагменте нет достаточно крупной ошибки. Попробуй выбрать другой участок партии.</div>';return;}
+ const w=detectiveWindow(),d=state.detective||{cursor:w.start,guess:null};d.cursor=Math.max(w.start,Math.min(w.end,d.cursor));state.detective=d;
+ const mv=state.moves[d.cursor],postFen=state.positions[d.cursor+1]||state.positions[d.cursor],isUser=mv.color===state.userColor;
+ renderBoard(postFen,false,{playedFrom:mv.from,playedTo:mv.to});
+ const moveNo=Math.floor((state.startPly+d.cursor)/2)+1,sideSuffix=mv.color==='w'?'белых':'чёрных',moveText=humanMove(mv,isUser?'Ты':'side');
+ const solved=d.guess&&d.guess.issueIndex===0,secondary=d.guess&&d.guess.issueIndex>0,wrong=d.guess&&d.guess.issueIndex<0;
+ let feedback='',actions='';
+ if(solved){
+   feedback=`<div class="detectiveFeedback correct"><strong>✅ Да — это главный момент</strong>Ты нашёл самый важный эпизод из тех, которые Doctor выделил в этой партии.</div>`;
+   actions=`<div class="detectiveActions"><button class="primary" id="retryDetective">Попробовать ещё раз</button><button class="ghost" id="showDoctor">Показать разбор Doctor</button></div>`;
+ }else if(secondary){
+   feedback=`<div class="detectiveFeedback close"><strong>🟡 Здесь тоже была проблема</strong>Doctor отметил этот ход, но в этом фрагменте есть более важный момент.</div>`;
+   actions=`<div class="detectiveActions"><button class="primary" id="continueSearch">Продолжить поиск главной ошибки</button><button class="ghost" id="showDoctor">Разобрать этот момент</button></div>`;
+ }else if(wrong){
+   feedback=`<div class="detectiveFeedback wrong"><strong>❌ Не этот момент</strong>Этот ход Doctor не считает достаточно важным для разбора. Ответ пока не раскрывается.</div>`;
+   actions=`<div class="detectiveActions"><button class="primary" id="continueSearch">Продолжить поиск</button><button class="ghost" id="showDoctor">Сдаться и показать разбор</button></div>`;
+ }
+ $('#card').innerHTML=`<div class="eyebrow">Detective <span class="localBadge">тот же анализ</span></div><h2>Найди момент, где всё пошло не так</h2>
+ <div class="step"><div class="stepLabel">Сейчас смотришь</div><div class="detectiveMove ${isUser?'':'detectiveOpponent'}">${moveNo}-й ход ${sideSuffix}: ${moveText}</div></div>
+ <div class="detectiveHint">В этом коротком фрагменте спрятан главный момент. Листай ходы и отмечай только свои решения. Ответ берётся из того же анализа, что и Doctor.</div>
+ <div class="detectiveNav"><button id="detPrev">◀ Назад</button><button id="detNext">Вперёд ▶</button></div>
+ <button class="primary detectiveGuess ${solved?'solved':''}" id="detGuess" ${(isUser&&!solved)?'':'disabled'}>${solved?'Момент найден ✓':(isUser?'Это ошибка':'Это ход соперника')}</button>${feedback}${actions}`;
+ $('#detPrev').disabled=d.cursor<=w.start||solved;$('#detNext').disabled=d.cursor>=w.end||solved;$('#detPrev').onclick=()=>detectiveStep(-1);$('#detNext').onclick=()=>detectiveStep(1);if(isUser&&!solved)$('#detGuess').onclick=detectiveGuess;const cont=$('#continueSearch');if(cont)cont.onclick=continueDetective;const retryDet=$('#retryDetective');if(retryDet)retryDet.onclick=retryDetective;const show=$('#showDoctor');if(show)show.onclick=openDoctorFromDetective;
+}
+function renderDoctor(){
+ const tabs=$('#tabs'),legend=document.querySelector('.legend');tabs.style.display='flex';if(legend)legend.style.display='flex';tabs.innerHTML='';if(!state.issues.length){$('#boardNav').hidden=true;renderBoard(state.positions[0],false,null);$('#card').innerHTML='<div class="empty">В выбранном фрагменте нет достаточно крупной ошибки. Выбери другой номер хода и запусти анализ снова.</div>';return;}
+ state.issues.forEach((x,i)=>{const b=document.createElement('button');b.className='issueTab'+(i===state.selected?' active':'');b.innerHTML=`<strong>${i+1}. ${shortTabTitle(x)}</strong><small>Ход ${Math.floor((state.startPly+x.i)/2)+1}: ${humanMove(x.move,'Ты').replace(/\.$/,'')}</small>`;b.onclick=()=>{doctorVisualToken++;doctorVisualLesson=null;const vg=$('#visualGuide');if(vg)vg.hidden=true;state.selected=i;state.view='before';state.retry=null;render();};tabs.appendChild(b);});
+ const x=state.issues[state.selected],best=x.bestmove;renderDoctorBoard(x);
+ const title=issueType(x),why=concreteWhy(x,best),chain=removedDefenderChain(x)||preThreatChain(x),directReply=replyIsDirectConsequence(x);
+ const nextStep=(directReply&&x.reply)?`<div class="step"><div class="stepLabel">Что произошло дальше</div><div class="stepText">${opponentReplyText(x)}</div></div>`:'';
+ const compare=best?`<div class="choiceCompare"><div class="choiceBox"><div class="choiceLabel">Ты выбрал</div><div class="choiceMove">${choiceMoveText(x.move)}</div><div class="choiceCapture">${choiceCaptureText(x.move)}</div></div><div class="choiceBox good"><div class="choiceLabel">Сильнее было</div><div class="choiceMove">${choiceMoveText(best)}</div><div class="choiceCapture">${choiceCaptureText(best)}</div></div></div>${valueExplanation(x,best)}`:'';
+ $('#card').innerHTML=`<div class="eyebrow">${categoryLabel(x)}</div><h2>${title}</h2>
+ <div class="step"><div class="stepLabel">Что сделал ты</div><div class="stepText"><strong>${humanMove(x.move,'Ты')}</strong></div></div>
+ ${nextStep}
+ <div class="why"><strong>Почему это важно:</strong> ${why}</div>
+ ${chain}
+ ${compare}
+ <div class="visualExplain"><strong>Посмотреть, а не читать</strong><p id="visualExplainStatus">Нажми — экран сам вернётся к доске. Дальше можно смотреть по одному шагу или включить автопоказ.</p><div class="visualActions"><button class="ghost" id="visualExplain">▶ Показать на доске</button>${best?'<button class="ghost" id="visualBetter">▶ Только сильный вариант</button>':''}</div></div>
+ <div class="lesson"><strong>Что стоило проверить:</strong> ${lessonText(x)}</div>
+ ${best?'':alternativeBlock(best)}
+ <button class="primary" id="retry" style="margin-top:14px">Попробовать ещё раз</button><div class="retryMsg" id="retryMsg"></div>
+ <details class="notation"><summary>Показать шахматную запись и оценку</summary><code>${notationLine(x,best)} · изменение оценки ≈ ${(Math.max(0,x.loss)/100).toFixed(1)} пешки · ${x.source==='cloud'?'Lichess Cloud':'Stockfish Lite'} · глубина ${x.depth||'—'}</code></details>
+ <div class="source">Doctor отделяет причину от совпадения и не приписывает следующему ходу соперника причинность без явной связи. Любая предложенная альтернатива проверяется на легальность.</div>`;
+ $('#visualExplain').onclick=()=>startDoctorVisualLesson(x);
+ const visualBetter=$('#visualBetter');
+ if(visualBetter)visualBetter.onclick=async()=>{
+   const token=++doctorVisualToken,best=x.bestmove;doctorVisualLesson=null;const vg=$('#visualGuide');if(vg)vg.hidden=true;$('#boardNav').hidden=true;visualBetter.disabled=true;visualScrollToBoard(false);visualStatus('Сильнее было: '+humanSuggestion(best).replace(/^Можно было\s+/,''));
+   try{
+     const game=new Chess(x.preFen),mv=game.move({from:best.from,to:best.to,...(best.promotion?{promotion:best.promotion}:{})});
+     if(mv){renderBoard(x.preFen,false,null);await doctorWait(350,token);await animateDoctorMove(x.preFen,mv,game.fen(),{playedFrom:mv.from,playedTo:mv.to,focus:[mv.to]},token,1250,'strong');await doctorWait(1100,token);}
+   }catch(_){}
+   if(token===doctorVisualToken){state.view='before';renderDoctorBoard(x);visualStatus('Готово. Можно сравнить ещё раз.');visualBetter.disabled=false;}
+ };
+ $('#retry').onclick=()=>{doctorVisualToken++;doctorVisualLesson=null;const vg=$('#visualGuide');if(vg)vg.hidden=true;startRetry(x);};
+}
+function startRetry(x){
+ const game=new Chess(x.preFen),legal=game.moves({verbose:true}),legalFrom=[...new Set(legal.map(m=>m.from))],inCheck=game.in_check();
+ state.retry={game,from:null,targets:[],legalFrom,inCheck};
+ $('#boardNav').hidden=true;
+ renderBoard(x.preFen,true,null);
+ const msg=$('#retryMsg');
+ if(msg)msg.textContent=inCheck?'⚠️ Сейчас тебе шах. Подсвечены только фигуры, которыми можно выйти из шаха.':'Нажми на свою фигуру, затем на поле, куда хочешь её поставить.';
+}
+function attemptVerdict(x,mv,ev,newLoss,sameAsBest,sameAsOriginal,oldLoss=x.loss){
+ if(sameAsBest)return{cls:'excellent',icon:'✅',title:'Отлично — ты нашёл сильный вариант',text:'Это именно тот вариант, который в этой позиции сохранял положение заметно лучше.',solved:true};
+ if(sameAsOriginal)return{cls:'repeat',icon:'🔁',title:'Ты повторил исходный ход',text:'Это именно тот ход, который мы сейчас разбираем. Попробуй другой вариант и сравни, что изменится.'};
+ if(!ev||newLoss==null)return{cls:'neutral',icon:'⚪',title:'Не могу надёжно сравнить',text:'Ход легален, но новая позиция пока не получила сопоставимой оценки. Попробуй ещё раз позже.'};
+ const improvement=oldLoss-newLoss;
+ if(newLoss<=40)return{cls:'good',icon:'🟢',title:'Хороший ход',text:'После этого хода не видно такого же заметного ухудшения, как в исходной попытке.'};
+ if(improvement>=70)return{cls:'improved',icon:'🟡',title:'Лучше прежнего, но есть сильнее',text:'Ты избежал части проблемы исходного хода, но в этой позиции был более сильный вариант.'};
+ if(newLoss<=oldLoss+35)return{cls:'improved',icon:'🟡',title:'Примерно того же уровня',text:'Новый ход не решает задачу заметно лучше. Попробуй ещё раз и сначала проверь угрозы и взятия соперника.'};
+ return{cls:'bad',icon:'❌',title:'Проблема осталась или стало хуже',text:'Этот ход не улучшил положение по сравнению с исходной попыткой.'};
+}
+function renderAttempt(x,mv,verdict,best,newLoss,oldLoss=x.loss){
+ renderBoard(state.retry?state.retry.game.fen():new Chess(x.preFen).fen(),false,{playedFrom:mv.from,playedTo:mv.to});
+ const bestBox=best&&!verdict.solved?`<div class="choiceCompare"><div class="choiceBox"><div class="choiceLabel">Твой новый ход</div><div class="choiceMove">${choiceMoveText(mv)}</div><div class="choiceCapture">${choiceCaptureText(mv)}</div></div><div class="choiceBox good"><div class="choiceLabel">Более сильный вариант</div><div class="choiceMove">${choiceMoveText(best)}</div><div class="choiceCapture">${choiceCaptureText(best)}</div></div></div>`:'';
+ const delta=(newLoss!=null&&Number.isFinite(newLoss))?`<div class="source">Сравнение по одной методике: новый ход ≈ ${(Math.max(0,newLoss)/100).toFixed(1)} пешки; исходный ≈ ${(Math.max(0,oldLoss)/100).toFixed(1)}.</div>`:'';
+ $('#card').innerHTML=`<div class="eyebrow">Новая попытка <span class="localBadge">разбор хода</span></div>
+ <h2>${humanMove(mv,'Ты')}</h2>
+ <div class="step"><div class="stepLabel">Что ты сыграл сейчас</div><div class="stepText"><strong>${humanMove(mv,'Ты')}</strong></div></div>
+ <div class="attemptResult ${verdict.cls}"><strong>${verdict.icon} ${verdict.title}</strong>${verdict.text}</div>
+ ${bestBox}
+ <button class="primary" id="retryAgain" style="margin-top:14px">Попробовать другой ход</button>
+ <details class="attemptOriginal"><summary>Показать исходную ошибку для сравнения</summary><div class="attemptOriginalBody"><strong>Исходный ход:</strong> ${humanMove(x.move,'Ты')}<br><strong>Почему разбираем:</strong> ${concreteWhy(x,best)}</div></details>
+ ${delta}`;
+ $('#retryAgain').onclick=()=>{state.retry=null;render();startRetry(state.issues[state.selected]);};
+}
+async function retryClick(sq){
+ const r=state.retry,x=state.issues[state.selected];if(!r)return;
+ if(!r.from){const p=r.game.get(sq);if(p&&p.color===r.game.turn()){const legalMoves=r.game.moves({square:sq,verbose:true});if(!legalMoves.length){$('#retryMsg').textContent=r.inCheck?'⚠️ Сейчас тебе шах. Эта фигура не может помочь выйти из шаха. Выбери одну из подсвеченных фигур.':'У этой фигуры сейчас нет легального хода. Выбери другую.';return;}r.from=sq;r.targets=legalMoves.map(m=>m.to);renderBoard(r.game.fen(),true,null);$('#retryMsg').textContent=`Выбрана фигура: ${pieceNom(p.type)} на ${sq}. Теперь выбери одно из подсвеченных полей.`;}else $('#retryMsg').textContent=r.inCheck?'⚠️ Сейчас тебе шах. Выбери одну из подсвеченных фигур, которая может убрать шах.':'Выбери свою фигуру.';return;}
+ const from=r.from;let mv=null;try{mv=r.game.move({from,to:sq,promotion:'q'});}catch(e){}
+ if(!mv){r.from=null;r.targets=[];renderBoard(r.game.fen(),true,null);$('#retryMsg').textContent='Так ходить нельзя. Выбери фигуру ещё раз.';return;}
+ renderBoard(r.game.fen(),false,{playedFrom:mv.from,playedTo:mv.to});
+ const sameAsBest=x.bestmove&&mv.from===x.bestmove.from&&mv.to===x.bestmove.to&&(mv.promotion||null)===(x.bestmove.promotion||null);
+ const sameAsOriginal=mv.from===x.move.from&&mv.to===x.move.to&&(mv.promotion||null)===(x.move.promotion||null);
+ let ev=null,newLoss=sameAsOriginal?x.loss:null,oldLoss=x.loss;
+ if(!sameAsBest&&!sameAsOriginal){
+   const newFen=r.game.fen();
+   const msg=$('#retryMsg');if(msg)msg.textContent='Сравниваю твою новую попытку…';
+   try {
+     const pre=await evaluationService.local(x.preFen,12);
+     if(r!==state.retry)return;
+     const original=await evaluationService.local(x.postFen,12);
+     if(r!==state.retry)return;
+     ev=await evaluationService.local(newFen,12);
+     if(r!==state.retry)return;
+     oldLoss=x.move.color==='w'?pre.cp-original.cp:original.cp-pre.cp;
+     newLoss=x.move.color==='w'?pre.cp-ev.cp:ev.cp-pre.cp;
+   }catch(_){ev=null;newLoss=null;}
+ }
+ if(r!==state.retry)return;
+ const verdict=attemptVerdict(x,mv,ev,newLoss,sameAsBest,sameAsOriginal,oldLoss);
+ renderAttempt(x,mv,verdict,x.bestmove,newLoss,oldLoss);
+ state.retry=null;
+}
+
+</script>
+<script src="masters.js"></script>
+</body>
+</html>
