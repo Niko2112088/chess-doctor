@@ -96,3 +96,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.7.0 Beta unified piece set
 
 `v070/` replaces all custom chess-piece SVGs with one consistent reference-inspired set. The knight is now explicitly horse-like; every piece shares the same base language and outline weight. Chess and animation logic are unchanged.
+
+
+## v0.7.1 Beta proportional piece set
+
+`v071/` uses the selected classic knight silhouette and normalizes all six piece sizes by visual mass. Piece bases now align consistently at the bottom of each board square.

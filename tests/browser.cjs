@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v070';
+const version=process.env.APP_VERSION||'v071';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -114,6 +114,15 @@ const server=http.createServer((req,res)=>{
  });
  await page.locator('#visualBetter').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
  await page.waitForFunction(()=>!document.querySelector('#visualBetter')?.disabled,{},{timeout:6000});
+ await page.evaluate(()=>{state.userColor='w';state.retry=null;renderBoard(new Chess().fen(),false,null);});
+ const proportions=await page.evaluate(()=>{
+   const types=['p','r','b','n','q','k'],out={};
+   for(const t of types){const el=document.querySelector('#board .piece[data-piece="'+t+'"]');out[t]={w:el.getBoundingClientRect().width,b:el.getBoundingClientRect().bottom};}
+   return out;
+ });
+ assert(proportions.p.w<proportions.r.w&&proportions.r.w<proportions.b.w&&proportions.b.w<proportions.n.w,'piece visual-size hierarchy should be pawn < rook < bishop < knight');
+ assert(Math.abs(proportions.n.w-proportions.q.w)<1.5&&Math.abs(proportions.q.w-proportions.k.w)<1.5,'major pieces should share a balanced top scale');
+ const baseBottoms=[proportions.r.b,proportions.b.b,proportions.n.b,proportions.q.b,proportions.k.b];assert(Math.max(...baseBottoms)-Math.min(...baseBottoms)<2.5,'back-rank piece bases should align');
  await page.locator('#pgn').fill('1. d4 d5 2. c4 e6');assert.equal(await page.locator('#board .sq').count(),0);
  await page.locator('#masters').click();await page.locator('.libraryCard').first().waitFor();
  await page.setViewportSize({width:375,height:812});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile library overflow');
