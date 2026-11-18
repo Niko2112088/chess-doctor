@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),http=require('http'),fs=require('fs'),path=require('path'),assert=require('assert');
 const root=path.resolve(__dirname,'..');
-const version=process.env.APP_VERSION||'v067';
+const version=process.env.APP_VERSION||'v068';
 const server=http.createServer((req,res)=>{
  const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith('/chess-doctor/')){res.writeHead(404);res.end();return;}
  let file=path.resolve(root,decodeURIComponent(url.pathname.slice('/chess-doctor/'.length)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
@@ -38,8 +38,10 @@ const server=http.createServer((req,res)=>{
  const improve=moments.find(m=>m.label!=='Сильный ход'&&m.bestmove&&(m.bestmove.from!==m.move.from||m.bestmove.to!==m.move.to));assert(improve,'expected an improvement teaching moment');
  await page.locator(`[data-moment="${moment.i}"]`).click();assert((await page.locator('#guessMaster').textContent()).includes('Попробуй найти сильный ход'));
  const strongExpectedFirst=moment.move.color==='b'?'h1':'a8';assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),strongExpectedFirst,'teaching side must be at bottom before Guess starts');
- await page.locator('#demoMomentMove').click();await page.locator('#masterBoard .moveGhost').waitFor({state:'attached'});await page.locator('#masterBoard .moveGhost').waitFor({state:'detached',timeout:2000});
- assert(await page.locator(`#masterBoard [data-sq="${moment.move.to}"]`).evaluate(el=>el.classList.contains('playedTo')),'demo must finish on described destination');
+ await page.locator('#demoMomentMove').click();
+ await page.locator('#masterBoard .moveArrow').waitFor({state:'attached',timeout:1500});assert(await page.locator(`#masterBoard [data-sq="${moment.move.to}"]`).evaluate(el=>el.classList.contains('cueTarget')),'master demo must pre-highlight destination');
+ await page.locator('#masterBoard .moveGhost').waitFor({state:'attached',timeout:2500});await page.locator('#masterBoard .moveGhost').waitFor({state:'detached',timeout:3500});
+ assert(await page.locator(`#masterBoard [data-sq="${moment.move.to}"]`).evaluate(el=>el.classList.contains('playedTo')),'demo must finish on described destination');assert.equal(await page.locator('#masterBoard .moveArrow').count(),1,'master demo arrow should remain after the move');
  await page.locator('#guessMaster').click();assert.equal(await page.locator('#masterBoard .sq').first().getAttribute('data-sq'),strongExpectedFirst,'Guess must not flip the board after selection');
  assert(!(await page.locator('#masterCard').textContent()).toLowerCase().includes('гроссмейстер'));
  assert.equal(await page.locator('#masterBoard .canMove').count(),0,'guess mode must not reveal which piece can move');
@@ -87,14 +89,29 @@ const server=http.createServer((req,res)=>{
  await page.waitForTimeout(700);
  const guideTop=await page.locator('#visualGuide').evaluate(el=>el.getBoundingClientRect().top);
  assert(guideTop<180,'starting a visual lesson should scroll the guide back near the board');
- await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
+ await page.locator('#visualNext').click();
+ await page.locator('#board .moveArrow.yours').waitFor({state:'attached',timeout:1500});assert(await page.locator('#board [data-sq="f3"]').evaluate(el=>el.classList.contains('cueTarget')),'visual lesson should show destination before the piece moves');
+ await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:4000});assert.equal(await page.locator('#board .moveArrow.yours').count(),1,'move direction arrow should remain after the user move');
  assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'next must advance one visual step');
  assert((await page.locator('#visualGuideTitle').textContent()).includes('Твой ход'),'second step must identify the user move');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'ТВОЙ ХОД');assert(await page.locator('#visualGuideRole').evaluate(el=>el.classList.contains('yours')));
- await page.locator('#visualNext').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:3000});
- assert((await page.locator('#visualGuideTitle').textContent()).includes('Более сильный вариант'),'last step must show the stronger move');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'СИЛЬНЫЙ ХОД');assert(await page.locator('#visualGuideRole').evaluate(el=>el.classList.contains('strong')));
+ await page.locator('#visualNext').click();await page.locator('#board .moveArrow.strong').waitFor({state:'attached',timeout:1500});await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:4000});
+ assert((await page.locator('#visualGuideTitle').textContent()).includes('Более сильный вариант'),'last step must show the stronger move');assert.equal(await page.locator('#board .moveArrow.strong').count(),1,'strong move must use its own green direction arrow');assert.equal((await page.locator('#visualGuideRole').textContent()).trim(),'СИЛЬНЫЙ ХОД');assert(await page.locator('#visualGuideRole').evaluate(el=>el.classList.contains('strong')));
  assert.equal(await page.locator('#board .sq').first().getAttribute('data-sq'),'a8','guided visual lesson must not flip own-game board');
  await page.locator('#visualPrev').click();assert((await page.locator('#visualGuideStep').textContent()).includes('Шаг 2 из 3'),'back must move one step without replaying everything');
  await page.locator('#visualGuideClose').click();assert(await page.locator('#visualGuide').isHidden(),'guided visual controls must close cleanly');
+ // Capture animation: victim warns, fades, and direction remains readable.
+ await page.evaluate(()=>{
+   const fen='7k/8/8/4p3/3P4/8/8/4K3 w - - 0 1',g=new Chess(fen),m=g.move({from:'d4',to:'e5'}),postFen=g.fen(),b=new Chess(fen),best=b.move({from:'d4',to:'d5'});
+   state.userColor='w';state.positions=[fen,postFen];state.moves=[m];state.issues=[{i:0,preFen:fen,postFen,move:m,reply:null,bestmove:best,loss:180,source:'local',depth:12}];state.selected=0;state.view='before';state.mode='doctor';render();
+ });
+ await page.locator('#visualExplain').click();await page.locator('#visualNext').click();
+ await page.locator('#board [data-sq="e5"].cueCapture').waitFor({state:'attached',timeout:1500});await page.locator('#board .captureVictim').waitFor({state:'attached',timeout:1500});await page.locator('#board .captureTaken').waitFor({state:'attached',timeout:3000});
+ await page.locator('#board .moveGhost').waitFor({state:'detached',timeout:4000});assert.equal(await page.locator('#board .moveArrow.yours').count(),1,'capture direction arrow should remain after capture');
+ await page.locator('#visualGuideClose').click();
+ await page.evaluate(()=>{
+   const pre=new Chess(),m=pre.move({from:'f2',to:'f3'}),postFen=pre.fen(),bestGame=new Chess(),best=bestGame.move({from:'e2',to:'e4'});
+   state.userColor='w';state.positions=[new Chess().fen(),postFen];state.moves=[m];state.issues=[{i:0,preFen:new Chess().fen(),postFen,move:m,reply:null,bestmove:best,loss:180,source:'local',depth:12}];state.selected=0;state.view='before';state.mode='doctor';render();
+ });
  await page.locator('#visualBetter').click();await page.locator('#board .moveGhost').waitFor({state:'attached',timeout:3000});
  await page.waitForFunction(()=>!document.querySelector('#visualBetter')?.disabled,{},{timeout:6000});
  await page.locator('#pgn').fill('1. d4 d5 2. c4 e6');assert.equal(await page.locator('#board .sq').count(),0);
