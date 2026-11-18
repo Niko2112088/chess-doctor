@@ -81,3 +81,8 @@ check remains a manual RC acceptance step; no real iPhone test is claimed.
 ## v0.6.7 Beta move-role labels
 
 `v067/` makes every guided visual scene self-identifying: “ТВОЙ ХОД”, “ХОД СОПЕРНИКА”, “СИЛЬНЫЙ ХОД”, plus supporting before/after labels. The labels are visually distinct and do not change chess logic.
+
+
+## v0.6.8 Beta reference-style move animation
+
+`v068/` applies the visual grammar from the supplied chess animation reference: source/target highlighting, persistent directional arrow, slower travel, explicit capture fade, and held final state. The same animation language is used in Doctor and Master Lessons. Chess-analysis logic is unchanged.
